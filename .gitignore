@@ -44,3 +44,16 @@ cached_bg*.png
 
 # Supabase local
 supabase/.temp/
+
+# Scratch / one-off scripts at root level
+test_plan.py
+
+# Playwright browser binaries (installed via `playwright install`)
+backend/.playwright/
+
+# Temp render dirs
+/tmp/imprnt_*
+
+# Log files
+*.log
+/tmp/*.log
