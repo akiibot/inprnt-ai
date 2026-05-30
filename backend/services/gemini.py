@@ -24,9 +24,11 @@ if settings.GOOGLE_AI_API_KEY:
     except Exception as e:
         print(f"Warning: Failed to initialize Gemini client: {e}")
 
-# Models
-PRIMARY_MODEL = "gemini-2.5-pro"
-FALLBACK_MODEL = "gemini-2.5-flash"
+# Models — gemini-2.5-pro requires a paid tier (free quota = 0).
+# Use flash as primary so we don't waste a round-trip failing on pro.
+# Swap back to pro once the project is on a paid plan.
+PRIMARY_MODEL = "gemini-2.5-flash"
+FALLBACK_MODEL = "gemini-2.5-flash"  # same model; kept for parity
 
 
 def get_gemini() -> genai.Client:

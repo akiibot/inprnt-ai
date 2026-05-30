@@ -18,8 +18,8 @@
     "body_font": "Inter",
     "body_font_bn": "Noto Sans Bengali"
   },
-  "logo_url": "mock-data/assets/volt_bd_logo.png",
-  "product_image_url": "mock-data/assets/volt_bd_can.png",
+  "logo_url": "/Users/yeanul/Desktop/Imprnt AI/mock-data/assets/volt_bd_logo.png",
+  "product_image_url": "/Users/yeanul/Desktop/Imprnt AI/mock-data/assets/volt_bd_can.png",
   "voice": {
     "tone": "High-energy, direct, motivational",
     "language": "both",

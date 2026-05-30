@@ -4,7 +4,7 @@ Validates the blueprint.json schema. Schema is FROZEN — see CONTEXT.md.
 """
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Literal, Optional, Union
 from uuid import uuid4
 
@@ -83,7 +83,8 @@ class BlueprintLayer(BaseModel):
 class BlueprintMetadata(BaseModel):
     adherence_level: Literal["strict", "moderate", "creative"]
     language: Literal["en", "bn", "both"]
-    generated_at: datetime = Field(default_factory=datetime.utcnow)
+    prompt: Optional[str] = None  # Original user campaign brief, persisted in the blueprint
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     model_used: str = "gemini-2.5-pro"
     retry_count: int = 0
 

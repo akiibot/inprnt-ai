@@ -12,7 +12,7 @@ from pathlib import Path
 from models.blueprint import Blueprint
 from services.supabase_client import get_brand, get_supabase, upload_file_to_storage
 from compositor.template import build_html
-from compositor.renderer import render_poster
+from compositor.renderer import render_poster_async
 
 router = APIRouter(tags=["Export"])
 
@@ -66,20 +66,10 @@ async def export_campaign_formats(request: ExportRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Invalid blueprint data: {e}")
         
-    # Find background URL (assume it's saved in the DB from generation phase,
-    # or we can try to extract it from the blueprint or campaign record.
-    # In generate_campaign_endpoint, we didn't explicitly store background_url in the DB row,
-    # but final_image_url is there. We should ideally fetch the background_url if available.
-    # For now, let's look at the assets.
-    bg_url = None
-    # Just construct it based on campaign ID since we know the path format
-    # "assets/{campaign_id}/background.png"
-    # Actually, we can fetch public URL for it directly
-    try:
-        bg_url_info = client.storage.from_("assets").get_public_url(f"{request.campaign_id}/background.png")
-        bg_url = bg_url_info
-    except:
-        bg_url = None
+    # Use the real background URL persisted on the campaign row during generation.
+    # (get_public_url would always return a URL even if the object was never
+    # uploaded — e.g. when Flux failed and we fell back to a solid colour.)
+    bg_url = campaign.get("background_url")
 
     assets = {
         "logo_url": brand_data.get("logo_url"),
@@ -109,8 +99,8 @@ async def export_campaign_formats(request: ExportRequest):
             out_filename = f"export_{fmt.width}x{fmt.height}.png"
             out_path = temp_dir / out_filename
             
-            # Render new poster synchronously inside the loop
-            final_png_path = render_poster(html, w, h, str(out_path))
+            # Render new poster (async — does not block the event loop)
+            final_png_path = await render_poster_async(html, w, h, str(out_path))
             
             # Upload to Supabase
             with open(final_png_path, "rb") as f:

@@ -67,6 +67,19 @@ async def _render_async(
     return str(out.resolve())
 
 
+async def render_poster_async(
+    html: str,
+    width: int,
+    height: int,
+    output_path: str,
+) -> str:
+    """
+    Async renderer — await this from inside an event loop (e.g. FastAPI routes)
+    so the Playwright render does not block the server.
+    """
+    return await _render_async(html, width, height, output_path)
+
+
 def render_poster(
     html: str,
     width: int,

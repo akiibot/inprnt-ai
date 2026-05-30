@@ -4,7 +4,7 @@ Validates the brand.json schema. Schema is FROZEN — see CONTEXT.md.
 """
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import uuid4
 
@@ -45,7 +45,7 @@ class Brand(BaseModel):
     product_image_url: Optional[str] = None
     voice: BrandVoice
     do_not_use: list[str] = Field(..., min_length=2)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class BrandUploadResponse(BaseModel):

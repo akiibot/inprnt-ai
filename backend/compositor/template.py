@@ -198,12 +198,18 @@ def build_html(blueprint: dict, brand: dict, assets: dict) -> str:
         f"background-color: {bg.get('fallback_color', '#0D0D0D')};"
     )
 
-    # ── Pre-encode local assets as data URIs ──────────────────────
-    # This avoids file:// path issues in headless browsers.
+    # ── Resolve logo/product assets ───────────────────────────────
+    # Remote (http/https) URLs are passed straight through — the headless
+    # browser fetches them. Only local file paths are base64-encoded as
+    # data URIs to avoid file:// path issues in headless browsers.
     asset_uris: dict[str, str] = {}
     for key in ("logo_url", "product_image_url"):
         path = assets.get(key, "")
-        if path:
+        if not path:
+            continue
+        if str(path).startswith("http"):
+            asset_uris[key] = path
+        else:
             asset_uris[key] = _img_to_data_uri(path)
 
     # Also embed background as data URI if it's a local file
