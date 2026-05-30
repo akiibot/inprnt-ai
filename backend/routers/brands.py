@@ -6,13 +6,14 @@ GET  /api/brands/{brand_id}
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile, Path
 import pdfplumber
 
 from models.brand import BrandUploadResponse, Brand
 from services.gemini import extract_brand
 from services.colorthief_service import extract_colors
-from services.supabase_client import upload_file_to_storage, save_brand, get_brand
+from services.removebg import remove_background
+from services.supabase_client import upload_file_to_storage, save_brand, get_brand, supabase, get_supabase
 
 router = APIRouter(tags=["Brands"])
 
@@ -131,3 +132,54 @@ async def get_brand_endpoint(brand_id: str):
         return Brand(**brand_data)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to parse database record: {e}")
+
+
+@router.post("/brands/{brand_id}/product")
+async def upload_product_image(
+    brand_id: str = Path(...),
+    product_image: UploadFile = File(...)
+):
+    """
+    Uploads a product image, strips the background using Remove.bg,
+    saves the transparent PNG to Supabase Storage, and updates the Brand record.
+    """
+    # 1. Verify Brand Exists
+    brand_data = get_brand(brand_id)
+    if not brand_data:
+        raise HTTPException(status_code=404, detail="Brand not found")
+        
+    try:
+        image_bytes = await product_image.read()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to read image: {e}")
+        
+    # 2. Strip Background
+    try:
+        transparent_bytes = remove_background(image_bytes, product_image.content_type)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to remove background: {e}")
+        
+    # 3. Upload to Supabase Storage
+    # Save as .png because remove.bg returns PNG format for transparency
+    filename = f"{brand_id}/product_transparent.png"
+    try:
+        url_info = upload_file_to_storage("assets", filename, transparent_bytes, "image/png")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to upload to storage: {e}")
+        
+    # 4. Update Brand Record in Database
+    try:
+        client = get_supabase()
+        # Update product_image_url in the brands table
+        res = client.table("brands").update({"product_image_url": url_info}).eq("id", brand_id).execute()
+        
+        if not res.data:
+            raise Exception("No record updated")
+    except Exception as e:
+         raise HTTPException(status_code=500, detail=f"Database update failed: {e}")
+         
+    return {
+        "message": "Product image processed and background removed successfully",
+        "product_image_url": url_info
+    }
+
