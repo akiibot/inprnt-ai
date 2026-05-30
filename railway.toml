@@ -6,7 +6,10 @@
   watchPatterns = ["backend/**"]
 
 [deploy]
-  startCommand = "uvicorn main:app --host 0.0.0.0 --port $PORT"
+  # Intentionally NO startCommand — Railway runs Dockerfile CMD overrides in
+  # exec form, which would pass `$PORT` as a literal string and crash uvicorn
+  # with "Invalid value for '--port': '$PORT' is not a valid integer".
+  # The Dockerfile's CMD already uses `sh -c` for proper variable expansion.
   healthcheckPath = "/api/health"
   healthcheckTimeout = 60
   restartPolicyType = "on_failure"
