@@ -1,0 +1,40 @@
+# Imprnt AI — Docker build ignores
+# Build context is the repo root; skip everything the backend image doesn't need.
+
+# Git
+.git
+.gitignore
+.gitmodules
+
+# Frontend (deployed separately on Vercel)
+frontend/
+
+# Python local dev artifacts
+**/__pycache__
+**/*.pyc
+**/*.pyo
+backend/.venv
+.venv
+venv
+
+# Editor / OS
+.vscode
+.idea
+.DS_Store
+*.swp
+
+# Docs / planning (not needed in container)
+*.md
+docs/
+
+# Secrets — never bake into images
+.env
+.env.*
+!.env.example
+
+# Mock data and scratch
+test_plan.py
+scripts/output
+
+# Claude config
+.claude/

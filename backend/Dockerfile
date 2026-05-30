@@ -36,18 +36,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # ── Python dependencies ───────────────────────────────────────────────────
-COPY requirements.txt .
+# Build context is the repo root (Railway default), so paths are prefixed
+# with backend/. For local `docker build .` runs, this also works as long
+# as you build from the repo root.
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # ── Playwright Chromium browser ───────────────────────────────────────────
 RUN playwright install chromium
 
 # ── Application code ──────────────────────────────────────────────────────
-COPY . .
+COPY backend/ .
 
 # ── Run ───────────────────────────────────────────────────────────────────
 # PORT is injected by Railway; default to 8000 for local docker run
 ENV PORT=8000
 EXPOSE 8000
 
-CMD uvicorn main:app --host 0.0.0.0 --port ${PORT}
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT}"]
