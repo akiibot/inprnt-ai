@@ -101,13 +101,13 @@ async def generate_campaign_endpoint(blueprint: Blueprint):
     
     try:
         # 2. Generate Background with Flux
-        bg_prompt = blueprint.background.get('prompt')
+        bg_prompt = blueprint.background.prompt if blueprint.background else None
         bg_url = None
         if bg_prompt:
             try:
                 # Get dimensions from format
-                w = blueprint.format.get('width', 1080)
-                h = blueprint.format.get('height', 1080)
+                w = blueprint.format.width
+                h = blueprint.format.height
                 
                 # Cloudflare Flux prefers multiples of 8, usually max 1024x1024 for free tier,
                 # but we'll try to pass actual dimensions and let it handle it.
@@ -140,8 +140,8 @@ async def generate_campaign_endpoint(blueprint: Blueprint):
         }
         
         # 4. Render Poster
-        w = blueprint.format.get('width', 1080)
-        h = blueprint.format.get('height', 1080)
+        w = blueprint.format.width
+        h = blueprint.format.height
         
         html = build_html(blueprint.model_dump(), brand_data, assets)
         out_path = temp_dir / "final_poster.png"

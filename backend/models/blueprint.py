@@ -32,17 +32,17 @@ class LayerSize(BaseModel):
 
 
 class LayerMargin(BaseModel):
-    top: Optional[int] = 0
-    right: Optional[int] = 0
-    bottom: Optional[int] = 0
-    left: Optional[int] = 0
+    top: Optional[Union[int, str]] = 0
+    right: Optional[Union[int, str]] = 0
+    bottom: Optional[Union[int, str]] = 0
+    left: Optional[Union[int, str]] = 0
 
 
 class LayerPadding(BaseModel):
-    top: Optional[int] = 0
-    right: Optional[int] = 0
-    bottom: Optional[int] = 0
-    left: Optional[int] = 0
+    top: Optional[Union[int, str]] = 0
+    right: Optional[Union[int, str]] = 0
+    bottom: Optional[Union[int, str]] = 0
+    left: Optional[Union[int, str]] = 0
 
 
 class BlueprintLayer(BaseModel):
