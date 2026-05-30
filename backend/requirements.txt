@@ -1,0 +1,33 @@
+# Imprnt AI — Backend Dependencies
+# Tested with Python 3.14 on macOS 14 (Apple Silicon).
+# pyppeteer is installed separately in Phase 1 to avoid resolution depth issues.
+
+# ── Web framework ─────────────────────────────────────────────
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+
+# ── Settings / env ────────────────────────────────────────────
+pydantic>=2.9.0
+pydantic-settings>=2.5.0
+python-dotenv>=1.0.0
+
+# ── HTTP ──────────────────────────────────────────────────────
+httpx>=0.26.0
+aiofiles>=24.1.0
+
+# ── File upload ───────────────────────────────────────────────
+python-multipart>=0.0.12
+
+# ── PDF parsing ───────────────────────────────────────────────
+pdfplumber>=0.11.0
+
+# ── Color extraction ──────────────────────────────────────────
+colorthief>=0.2.1
+Pillow>=10.0.0
+
+# ── Supabase (DB + Storage) ───────────────────────────────────
+supabase>=2.10.0
+
+# NOTE: pyppeteer is installed separately in Phase 1
+# to avoid pip resolution-too-deep error.
+# Command: pip install "pyppeteer>=2.0.0" "tqdm>=4.42.1,<5" "pyee>=11.0.0,<12"
