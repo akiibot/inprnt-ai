@@ -18,7 +18,7 @@ aiofiles>=24.1.0
 # ── File upload ───────────────────────────────────────────────
 python-multipart>=0.0.12
 
-# ── PDF parsing ───────────────────────────────────────────────
+# ── PDF parsing ────────────────────────────────────────────────
 pdfplumber>=0.11.0
 
 # ── Color extraction ──────────────────────────────────────────
@@ -31,3 +31,7 @@ supabase>=2.10.0
 # ── HTML → PNG rendering (headless Chromium) ─────────────────
 # After installing, run: playwright install chromium
 playwright>=1.40.0
+
+# ── Google Gemini AI ──────────────────────────────────────────
+google-genai>=1.0.0
+
