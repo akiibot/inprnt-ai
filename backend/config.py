@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     APP_ENV: str = "development"
     DEMO_FALLBACK_MODE: bool = False
 
+    # CORS — comma-separated list of allowed frontend origins.
+    # In production set to your Vercel URL, e.g.:
+    #   ALLOWED_ORIGINS=https://your-app.vercel.app
+    ALLOWED_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001"
+
     @property
     def cloudflare_flux_url(self) -> str:
         """Full Cloudflare Workers AI endpoint URL for Flux 1 Schnell."""

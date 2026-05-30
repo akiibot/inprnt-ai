@@ -28,6 +28,6 @@ Pillow>=10.0.0
 # ── Supabase (DB + Storage) ───────────────────────────────────
 supabase>=2.10.0
 
-# NOTE: pyppeteer is installed separately in Phase 1
-# to avoid pip resolution-too-deep error.
-# Command: pip install "pyppeteer>=2.0.0" "tqdm>=4.42.1,<5" "pyee>=11.0.0,<12"
+# ── HTML → PNG rendering (headless Chromium) ─────────────────
+# After installing, run: playwright install chromium
+playwright>=1.40.0

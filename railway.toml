@@ -1,0 +1,13 @@
+# Railway deployment config for Imprnt AI backend
+# Railway auto-detects this file and uses the Dockerfile in backend/
+
+[build]
+  dockerfilePath = "backend/Dockerfile"
+  watchPatterns = ["backend/**"]
+
+[deploy]
+  startCommand = "uvicorn main:app --host 0.0.0.0 --port $PORT"
+  healthcheckPath = "/api/health"
+  healthcheckTimeout = 60
+  restartPolicyType = "on_failure"
+  restartPolicyMaxRetries = 3
