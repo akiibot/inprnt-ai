@@ -4,8 +4,12 @@ Main application entry point with CORS and all router registrations.
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from config import settings
+from routers import brands, campaigns, export
 
 app = FastAPI(
     title="Imprnt AI API",
@@ -28,11 +32,9 @@ app.add_middleware(
 )
 
 # ── Routers ──────────────────────────────────────────────────────────────────
-# Routers are registered here as they are built in each phase.
-# Phase 2+: from routers import brands, campaigns, export
-# app.include_router(brands.router, prefix="/api")
-# app.include_router(campaigns.router, prefix="/api")
-# app.include_router(export.router, prefix="/api")
+app.include_router(brands.router, prefix="/api")
+app.include_router(campaigns.router, prefix="/api")
+app.include_router(export.router, prefix="/api")
 
 
 # ── Health Check ─────────────────────────────────────────────────────────────

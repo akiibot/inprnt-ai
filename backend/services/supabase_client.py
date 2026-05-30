@@ -1,5 +1,50 @@
 """
-Imprnt AI — Phase 2+ stub: Supabase client
-DB reads/writes and Storage bucket operations.
-Full implementation in Phase 2.
+Imprnt AI — Supabase Client
+Handles database operations and storage buckets.
 """
+from supabase import create_client, Client
+from config import settings
+
+# Initialize Supabase client globally
+supabase: Client = None
+
+if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_KEY:
+    try:
+        supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
+    except Exception as e:
+        print(f"Warning: Failed to initialize Supabase client: {e}")
+
+def get_supabase() -> Client:
+    """Returns the Supabase client instance."""
+    if not supabase:
+        raise ValueError("Supabase client not initialized. Check SUPABASE_URL and SUPABASE_SERVICE_KEY in .env")
+    return supabase
+
+def upload_file_to_storage(bucket_name: str, file_path: str, file_bytes: bytes, content_type: str) -> str:
+    """
+    Uploads a file to a Supabase Storage bucket and returns its public URL.
+    """
+    client = get_supabase()
+    
+    # Upload file
+    res = client.storage.from_(bucket_name).upload(
+        path=file_path,
+        file=file_bytes,
+        file_options={"content-type": content_type, "upsert": "true"}
+    )
+    
+    # Get public URL
+    url_info = client.storage.from_(bucket_name).get_public_url(file_path)
+    return url_info
+
+def save_brand(brand_data: dict) -> dict:
+    """Saves a brand to the database."""
+    client = get_supabase()
+    response = client.table("brands").insert(brand_data).execute()
+    return response.data[0] if response.data else None
+
+def get_brand(brand_id: str) -> dict:
+    """Retrieves a brand from the database."""
+    client = get_supabase()
+    response = client.table("brands").select("*").eq("id", brand_id).execute()
+    return response.data[0] if response.data else None
