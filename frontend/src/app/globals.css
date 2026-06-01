@@ -1,0 +1,129 @@
+/* ================================================================
+   Imprnt AI — Global Styles
+   Design tokens, typography, and base resets
+   ================================================================ */
+
+/* ── Google Font CSS Variables ──────────────────────────────── */
+:root {
+  /* Font families (set by next/font CSS variables) */
+  --font-heading-en: var(--font-anton), system-ui, sans-serif;
+  --font-heading-bn: var(--font-hind-siliguri), system-ui, sans-serif;
+  --font-body-en: var(--font-inter), system-ui, sans-serif;
+  --font-body-bn: var(--font-noto-bengali), system-ui, sans-serif;
+
+  /* ── Color Palette ─────────────────────────────────────────── */
+  --color-bg:          #080808;
+  --color-bg-card:     #111111;
+  --color-bg-elevated: #1a1a1a;
+  --color-border:      rgba(255, 255, 255, 0.08);
+  --color-border-hover:rgba(255, 75, 0, 0.4);
+
+  --color-primary:     #FF4B00;
+  --color-primary-dim: rgba(255, 75, 0, 0.15);
+  --color-primary-glow:rgba(255, 75, 0, 0.3);
+  --color-accent:      #FF6B2C;
+  --color-white:       #FFFFFF;
+  --color-grey-100:    #F5F5F5;
+  --color-grey-400:    #999999;
+  --color-grey-600:    #444444;
+
+  /* ── Spacing ───────────────────────────────────────────────── */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* ── Radii ─────────────────────────────────────────────────── */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* ── Transitions ───────────────────────────────────────────── */
+  --transition-fast:   150ms ease;
+  --transition-normal: 250ms ease;
+  --transition-slow:   400ms ease;
+}
+
+/* ── Base Reset ─────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: var(--font-body-en);
+  background-color: var(--color-bg);
+  color: var(--color-white);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ── Scrollbar ──────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-grey-600);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary);
+}
+
+/* ── Typography utilities ───────────────────────────────────── */
+.font-bn {
+  font-family: var(--font-body-bn);
+}
+.font-bn-heading {
+  font-family: var(--font-heading-bn);
+}
+.font-en-heading {
+  font-family: var(--font-heading-en);
+}
+
+/* ── Focus visible ──────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* ── Selection ──────────────────────────────────────────────── */
+::selection {
+  background: var(--color-primary-dim);
+  color: var(--color-white);
+}
+
+/* ── Utility: visually hidden ───────────────────────────────── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

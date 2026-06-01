@@ -30,6 +30,7 @@ yarn-error.log*
 # OS
 .DS_Store
 Thumbs.db
+__MACOSX/
 
 # Editor
 .vscode/
@@ -57,3 +58,7 @@ backend/.playwright/
 # Log files
 *.log
 /tmp/*.log
+
+# Local upload / extraction artifacts
+frontend.zip
+frontend/frontend/
