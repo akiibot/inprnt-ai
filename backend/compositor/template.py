@@ -140,6 +140,17 @@ def _img_to_data_uri(path: str) -> str:
     return f"data:{mime};base64,{data}"
 
 
+def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
+    """Parse '#RRGGBB' → (r, g, b). Falls back to black on bad input."""
+    try:
+        h = (hex_color or "").lstrip("#")
+        if len(h) == 3:
+            h = "".join(c * 2 for c in h)
+        return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    except Exception:
+        return 0, 0, 0
+
+
 def _px(value: Optional[int | str]) -> str:
     """Convert an int to px string, or pass through 'auto'."""
     if value is None or value == "auto":
@@ -220,17 +231,23 @@ def _render_text(layer: dict) -> str:
             f'{content}</span></div>'
         )
 
-    # Plain text variant
+    # Plain text variant. A drop shadow keeps headlines legible over a busy,
+    # high-detail Flux background — larger text gets a deeper shadow.
+    shadow = (
+        "text-shadow: 0 4px 24px rgba(0,0,0,0.65), 0 2px 6px rgba(0,0,0,0.55);"
+        if font_size >= 44
+        else "text-shadow: 0 2px 10px rgba(0,0,0,0.55);"
+    )
     return (
         f'<div {lang_attr} style="position:absolute; {pos_css} {margin_css} {max_w_css} z-index:{z}; '
         f'font-family:\'{font_family}\', sans-serif; font-size:{font_size}px; '
         f'font-weight:{font_weight}; color:{color}; text-transform:{transform}; '
-        f'line-height:{line_height}; word-break:keep-all;">'
+        f'line-height:{line_height}; word-break:keep-all; {shadow}">'
         f'{content}</div>'
     )
 
 
-def _render_image(layer: dict, asset_uri: str) -> str:
+def _render_image(layer: dict, asset_uri: str, accent: str = "#000000") -> str:
     """Render an image layer (logo or product image)."""
     if not asset_uri:
         return ""
@@ -240,16 +257,31 @@ def _render_image(layer: dict, asset_uri: str) -> str:
     z      = layer.get("z_index", 5)
     pos    = layer.get("position", "top-left")
     margin = layer.get("margin", {})
+    asset_key = layer.get("asset_key", "")
 
     pos_css    = POSITION_CSS.get(pos, POSITION_CSS["top-left"])
     margin_css = _margin_css(margin)
     w_css = f"width:{_px(w)};" if w != "auto" else "width:auto;"
     h_css = f"height:{_px(h)};" if h != "auto" else "height:auto;"
 
+    # Product images get a grounding drop-shadow plus a soft accent glow so they
+    # read as composited into the scene instead of pasted flat on top.
+    if asset_key == "product_image_url":
+        _r, _g, _b = _hex_to_rgb(accent)
+        filter_css = (
+            f"filter: drop-shadow(0 28px 36px rgba(0,0,0,0.65)) "
+            f"drop-shadow(0 0 60px rgba({_r},{_g},{_b},0.45));"
+        )
+    elif asset_key == "logo_url":
+        # Subtle shadow keeps the logo legible over busy/light backgrounds.
+        filter_css = "filter: drop-shadow(0 2px 6px rgba(0,0,0,0.45));"
+    else:
+        filter_css = ""
+
     return (
         f'<img src="{asset_uri}" '
         f'style="position:absolute; {pos_css} {margin_css} {w_css} {h_css} '
-        f'z-index:{z}; object-fit:contain;" />'
+        f'z-index:{z}; object-fit:contain; {filter_css}" />'
     )
 
 
@@ -312,6 +344,10 @@ def build_html(blueprint: dict, brand: dict, assets: dict) -> str:
     # ── Sort layers by z_index ────────────────────────────────────
     sorted_layers = sorted(layers, key=lambda l: l.get("z_index", 0))
 
+    # Brand accent used for the product-image glow (falls back to primary/white).
+    brand_colors = brand.get("colors", {}) if isinstance(brand, dict) else {}
+    accent = brand_colors.get("accent") or brand_colors.get("primary") or "#FFFFFF"
+
     # ── Render each layer ─────────────────────────────────────────
     layer_html_parts: list[str] = []
     for layer in sorted_layers:
@@ -331,7 +367,7 @@ def build_html(blueprint: dict, brand: dict, assets: dict) -> str:
                 uri = asset_uris.get(asset_key, "")
                 if not uri and optional:
                     continue  # skip optional layers with missing assets
-                layer_html_parts.append(_render_image(layer, uri))
+                layer_html_parts.append(_render_image(layer, uri, accent))
 
     layers_html = "\n    ".join(layer_html_parts)
 

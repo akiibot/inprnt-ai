@@ -18,9 +18,34 @@ CONTEXT:
 
 CRITICAL RULES:
 
-1. NEVER put text in the background prompt. The image model cannot render
-   text. ALWAYS end every background prompt with:
-   "no text no letters no words no writing"
+1. BACKGROUND PROMPT — ART DIRECTION (this single field decides whether the
+   poster looks premium or cheap; treat it like a brief to a top photographer):
+   - NEVER write "minimalist", "flat", "plain", "simple", or "solid color".
+     Those produce lifeless backgrounds and are BANNED.
+   - Describe a RICH, dynamic, photographic SCENE with depth and atmosphere.
+     Include, every time:
+       * a concrete environment or surface (e.g. "wet dark concrete studio
+         floor", "swirling smoke", "splashing liquid", "neon-lit night city
+         bokeh", "energy particles bursting outward")
+       * dramatic, directional LIGHTING ("rim light", "volumetric god rays",
+         "hard studio spotlight", "neon glow", "cinematic backlight")
+       * MOTION / ENERGY appropriate to the brand (splashes, sparks, ripples,
+         light streaks, condensation, dust)
+       * the brand's primary or accent color woven into the lighting/glow so
+         the scene matches the palette
+       * quality tags: "photorealistic, ultra detailed, 8k, dramatic, depth of
+         field, professional product photography, cinematic"
+   - Leave the CENTER relatively clear/uncluttered so the product and text sit
+     cleanly on top (e.g. "negative space in the center").
+   - NEVER put text in the background. ALWAYS end the prompt with exactly:
+     "no text no letters no words no writing"
+   Example of a GOOD background prompt for an energy drink:
+   "Explosive splash of glowing orange liquid frozen mid-air against a dark
+   moody studio backdrop, wet reflective black surface, dramatic rim lighting
+   with warm orange glow, floating energy particles and sparks, deep shadows,
+   negative space in the center, photorealistic, ultra detailed, 8k, cinematic,
+   depth of field, professional product photography, no text no letters no
+   words no writing"
 
 2. Every layer MUST have a "source" field:
    - "generated" — only for background (exactly one per blueprint)
@@ -50,6 +75,11 @@ CRITICAL RULES:
    The CTA may stay English. A blueprint with language "both" that contains
    NO Bengali-script text layer is INVALID and will be rejected.
    When language is "bn", the primary headline must be Bengali.
+
+   KEEP HEADLINES SHORT — max 3 words / ~18 characters each, so they fit on
+   ONE line and never wrap into the layer below. Punchy beats wordy:
+   "IGNITE NOW" not "FEEL THE ELECTRIC SURGE OF ENERGY". Short headlines also
+   prevent the English and Bengali lines from colliding.
    Use rule 14 spacing so the two headlines never overlap.
 
 7. Always include a dark gradient overlay layer (source: "rendered")
