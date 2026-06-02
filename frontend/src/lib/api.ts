@@ -8,6 +8,7 @@ import type {
   HealthResponse,
   Brand,
   Blueprint,
+  AdherenceLevel,
   CampaignPlanRequest,
   CampaignPlanResponse,
   CampaignGenerateResponse,
@@ -106,6 +107,30 @@ export async function uploadProductImage(
 
 export async function getBrand(brandId: string): Promise<Brand> {
   return request<Brand>(`/brands/${brandId}`);
+}
+
+export async function loadDemoBrand(): Promise<{ brand_id: string; brand: Brand; prompt: string }> {
+  return request("/brands/load-demo", { method: "POST" });
+}
+
+export async function getCampaign(campaignId: string): Promise<Record<string, unknown>> {
+  return request(`/campaigns/${campaignId}`);
+}
+
+export async function runDemoGenerate(
+  brandId: string,
+  prompt: string,
+  adherenceLevel: AdherenceLevel = "moderate",
+): Promise<GenerateAllResponse> {
+  return request<GenerateAllResponse>("/campaigns/generate-all", {
+    method: "POST",
+    body: JSON.stringify({
+      brand_id: brandId,
+      prompt,
+      adherence_level: adherenceLevel,
+      product_image_available: true,
+    }),
+  });
 }
 
 // ── Campaign Plan ─────────────────────────────────────────────

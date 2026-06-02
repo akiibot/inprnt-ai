@@ -4,6 +4,8 @@ POST /api/campaigns/plan
 POST /api/campaigns/generate
 POST /api/campaigns/generate-all
 """
+import asyncio
+import json
 import shutil
 import time
 import traceback
@@ -12,9 +14,9 @@ from pathlib import Path
 from typing import Literal, Optional
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from config import settings
 from models.blueprint import (
     Blueprint,
     CampaignGenerateResponse,
@@ -26,6 +28,31 @@ from services.supabase_client import get_brand, get_supabase, upload_file_to_sto
 from services.flux import generate_background
 from compositor.template import build_html
 from compositor.renderer import render_poster_async
+
+_MOCK_DATA_DIR = Path(__file__).parent.parent.parent / "mock-data"
+
+
+def _load_cached_posters() -> Optional[dict]:
+    """Return cached demo poster response if all three URLs are populated."""
+    cached_path = _MOCK_DATA_DIR / "cached_posters.json"
+    if not cached_path.exists():
+        return None
+    try:
+        data = json.loads(cached_path.read_text(encoding="utf-8"))
+        urls = data.get("formats", {})
+        if all(urls.get(ar) for ar in ("1:1", "9:16", "16:9")):
+            return {
+                "campaign_id": "volt-bd-demo-cached",
+                "formats": [
+                    {"name": "Instagram Post", "aspect_ratio": "1:1", "poster_url": urls["1:1"]},
+                    {"name": "Instagram Story", "aspect_ratio": "9:16", "poster_url": urls["9:16"]},
+                    {"name": "Facebook Cover", "aspect_ratio": "16:9", "poster_url": urls["16:9"]},
+                ],
+                "total_generation_time_seconds": 0.0,
+            }
+    except Exception:
+        pass
+    return None
 
 router = APIRouter(tags=["Campaigns"])
 
@@ -99,25 +126,31 @@ async def _render_blueprint(
     temp_dir: Path,
 ) -> tuple[str, Optional[str], float]:
     """
-    Generate the background (Flux), render the poster (Playwright), upload both,
-    and return (poster_url, background_url, elapsed_seconds). Does NOT touch the DB.
+    Generate the background (Flux), render the poster (Playwright), upload both.
+    Sync I/O (Flux + Supabase uploads) runs in a thread-pool executor so it
+    doesn't block the event loop and can overlap with other concurrent renders.
     """
     start = time.time()
     label = _ar_label(blueprint.format.aspect_ratio)
+    loop = asyncio.get_running_loop()
 
-    # 1. Background (best-effort — fall back to solid colour on failure)
+    # 1. Background — run sync HTTP in executor so other renders proceed in parallel
     bg_url: Optional[str] = None
     bg_prompt = blueprint.background.prompt if blueprint.background else None
     if bg_prompt:
         try:
-            bg_bytes = generate_background(prompt=bg_prompt, width=1024, height=1024)
-            bg_url = upload_file_to_storage(
-                "assets", f"{campaign_id}/background_{label}.png", bg_bytes, "image/png"
+            bg_bytes = await loop.run_in_executor(
+                None, lambda: generate_background(prompt=bg_prompt, width=1024, height=1024)
+            )
+            bg_url = await loop.run_in_executor(
+                None, lambda: upload_file_to_storage(
+                    "assets", f"{campaign_id}/background_{label}.png", bg_bytes, "image/png"
+                )
             )
         except Exception as e:
-            print(f"Warning: Background generation failed: {e}")
+            print(f"Warning: Background generation failed ({label}): {e}")
 
-    # 2. Compose + render
+    # 2. Compose HTML + Playwright render (truly async — overlaps with other renders)
     assets = {
         "logo_url": brand_data.get("logo_url"),
         "product_image_url": brand_data.get("product_image_url"),
@@ -129,14 +162,54 @@ async def _render_blueprint(
         html, blueprint.format.width, blueprint.format.height, str(out_path)
     )
 
-    # 3. Upload final poster
+    # 3. Upload poster — executor again so upload doesn't block the loop
     with open(final_png_path, "rb") as f:
         final_bytes = f.read()
-    poster_url = upload_file_to_storage(
-        "campaigns", f"{campaign_id}/poster_{label}.png", final_bytes, "image/png"
+    poster_url = await loop.run_in_executor(
+        None, lambda: upload_file_to_storage(
+            "campaigns", f"{campaign_id}/poster_{label}.png", final_bytes, "image/png"
+        )
     )
 
     return poster_url, bg_url, time.time() - start
+
+
+async def _plan_and_render_format(
+    brand_id: str,
+    brand_data: dict,
+    prompt: str,
+    fmt: dict,
+    adherence_level: str,
+    product_image_available: bool,
+    campaign_id: str,
+    temp_dir: Path,
+) -> dict:
+    """
+    Plan (Gemini, sync → executor) + render (Playwright, async) one format.
+    Designed to be run concurrently via asyncio.gather for all three formats.
+    """
+    loop = asyncio.get_running_loop()
+    blueprint, _ = await loop.run_in_executor(
+        None,
+        lambda: _plan_blueprint(
+            brand_id=brand_id,
+            brand_data=brand_data,
+            prompt=prompt,
+            format_spec=fmt,
+            adherence_level=adherence_level,
+            product_image_available=product_image_available,
+        ),
+    )
+    poster_url, bg_url, elapsed = await _render_blueprint(
+        blueprint, brand_data, campaign_id, temp_dir
+    )
+    return {
+        "blueprint": blueprint,
+        "fmt": fmt,
+        "poster_url": poster_url,
+        "bg_url": bg_url,
+        "elapsed": elapsed,
+    }
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -213,7 +286,7 @@ async def generate_campaign_endpoint(blueprint: Blueprint):
         raise
     except Exception as e:
         traceback.print_exc()
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
         if temp_dir.exists():
             shutil.rmtree(temp_dir)
@@ -222,7 +295,7 @@ async def generate_campaign_endpoint(blueprint: Blueprint):
 class GenerateAllRequest(BaseModel):
     brand_id: str
     prompt: str
-    adherence_level: Literal["strict", "moderate", "creative"] = "strict"
+    adherence_level: Literal["strict", "moderate", "creative"] = "moderate"
     product_image_available: bool = False
 
 
@@ -232,6 +305,12 @@ async def generate_all_endpoint(request: GenerateAllRequest):
     Plan and render all three canonical formats (1:1, 9:16, 16:9) for a brand
     and persist them as a single campaign row.
     """
+    # Demo shortcut: serve cached posters instantly, skip Flux + Playwright entirely
+    if settings.DEMO_FALLBACK_MODE:
+        cached = _load_cached_posters()
+        if cached:
+            return cached
+
     brand_data = get_brand(request.brand_id)
     if not brand_data:
         raise HTTPException(status_code=404, detail=f"Brand {request.brand_id} not found")
@@ -241,36 +320,38 @@ async def generate_all_endpoint(request: GenerateAllRequest):
     temp_dir.mkdir(parents=True, exist_ok=True)
 
     try:
+        # All 3 formats planned + rendered in parallel — wall-clock time = longest single format
+        results = await asyncio.gather(*[
+            _plan_and_render_format(
+                brand_id=request.brand_id,
+                brand_data=brand_data,
+                prompt=request.prompt,
+                fmt=fmt,
+                adherence_level=request.adherence_level,
+                product_image_available=request.product_image_available,
+                campaign_id=campaign_id,
+                temp_dir=temp_dir,
+            )
+            for fmt in _ALL_FORMATS
+        ])
+
         formats_out = []
         poster_urls: dict[str, str] = {}
         first_blueprint: Optional[Blueprint] = None
         first_bg_url: Optional[str] = None
-        total_elapsed = 0.0
+        total_elapsed = max(r["elapsed"] for r in results)  # wall-clock, not sum
 
-        for fmt in _ALL_FORMATS:
-            blueprint, _ = _plan_blueprint(
-                brand_id=request.brand_id,
-                brand_data=brand_data,
-                prompt=request.prompt,
-                format_spec=fmt,
-                adherence_level=request.adherence_level,
-                product_image_available=request.product_image_available,
-            )
-            poster_url, bg_url, elapsed = await _render_blueprint(
-                blueprint, brand_data, campaign_id, temp_dir
-            )
-            total_elapsed += elapsed
-            poster_urls[fmt["aspect_ratio"]] = poster_url
-
-            if first_blueprint is None:
-                first_blueprint = blueprint
-                first_bg_url = bg_url
-
+        for r in results:
+            ar = r["fmt"]["aspect_ratio"]
+            poster_urls[ar] = r["poster_url"]
             formats_out.append({
-                "name": fmt["name"],
-                "aspect_ratio": fmt["aspect_ratio"],
-                "poster_url": poster_url,
+                "name": r["fmt"]["name"],
+                "aspect_ratio": ar,
+                "poster_url": r["poster_url"],
             })
+            if first_blueprint is None:
+                first_blueprint = r["blueprint"]
+                first_bg_url = r["bg_url"]
 
         db_payload = {
             "id": campaign_id,
@@ -288,7 +369,8 @@ async def generate_all_endpoint(request: GenerateAllRequest):
             "model_used": first_blueprint.metadata.model_used,
             "retry_count": first_blueprint.metadata.retry_count,
         }
-        get_supabase().table("campaigns").insert(db_payload).execute()
+        if not settings.DEMO_FALLBACK_MODE:
+            get_supabase().table("campaigns").insert(db_payload).execute()
 
         return {
             "campaign_id": campaign_id,
@@ -299,7 +381,16 @@ async def generate_all_endpoint(request: GenerateAllRequest):
         raise
     except Exception as e:
         traceback.print_exc()
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
         if temp_dir.exists():
             shutil.rmtree(temp_dir)
+
+
+@router.get("/campaigns/{campaign_id}")
+async def get_campaign_endpoint(campaign_id: str):
+    """Retrieve a campaign row (including blueprint JSON) by ID."""
+    res = get_supabase().table("campaigns").select("*").eq("id", campaign_id).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    return res.data[0]

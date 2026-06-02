@@ -40,8 +40,17 @@ CRITICAL RULES:
 
 5. Colors must come from brand.colors. Do not invent new colors.
 
-6. If language is "both", include SEPARATE Bengali and English text layers.
-   Bengali text uses the _bn font. English text uses the Latin font.
+6. BILINGUAL OUTPUT (MANDATORY when language is "both" or "bn"):
+   This product's headline feature is rendering Bangla AND English together.
+   When language is "both", the blueprint MUST contain BOTH of these as
+   SEPARATE text layers — never drop the Bengali to simplify the layout:
+     - An English headline (Latin heading font, e.g. Anton)
+     - A Bengali headline that conveys the SAME message (font_family
+       "Hind Siliguri"), placed directly beneath the English headline.
+   The CTA may stay English. A blueprint with language "both" that contains
+   NO Bengali-script text layer is INVALID and will be rejected.
+   When language is "bn", the primary headline must be Bengali.
+   Use rule 14 spacing so the two headlines never overlap.
 
 7. Always include a dark gradient overlay layer (source: "rendered")
    between the background and text to ensure text readability.
@@ -72,6 +81,32 @@ CRITICAL RULES:
     - "strict": Use only brand colors, fonts, and tone. No creative liberty.
     - "moderate": Follow brand palette but allow complementary shades.
     - "creative": Use brand as inspiration, allow artistic reinterpretation.
+
+14. TEXT LAYOUT — PREVENT OVERLAP (critical, the #1 cause of bad output):
+    Text is absolutely positioned and CAN overlap if spaced poorly. Follow these
+    rules exactly:
+
+    a. Give each text layer a DISTINCT position anchor whenever possible.
+       Good default spread:
+         - Headline (English)  → "top-center"
+         - Sub-headline (Bengali / translation) → "center"  (NOT top-center)
+         - CTA button          → "bottom-center"
+         - Legal / small print → "bottom-right" or "bottom-left"
+       Never stack two large text layers at the SAME anchor.
+
+    b. A headline can wrap to TWO lines. Always reserve vertical space for that.
+       When two text layers MUST share the same anchor (e.g. an English headline
+       and a Bengali headline both "top-center"), the second layer's margin-top
+       must be at least:
+            first.margin_top + (first.font_size * 2.4) + 40
+       This clears a two-line wrap plus a 40px gap.
+
+    c. The English headline and its Bengali translation should be placed as a
+       PAIR with the Bengali directly under the English using rule (b), OR put
+       the Bengali at "center" while the English stays at "top-center".
+
+    d. Keep headline max_width <= format width minus 160 (80px side padding),
+       so text never touches the canvas edges.
 
 INPUT YOU WILL RECEIVE:
 - brand_json: The complete brand identity object

@@ -28,6 +28,10 @@ Pillow>=10.0.0
 # ── Supabase (DB + Storage) ───────────────────────────────────
 supabase>=2.10.0
 
-# NOTE: pyppeteer is installed separately in Phase 1
-# to avoid pip resolution-too-deep error.
-# Command: pip install "pyppeteer>=2.0.0" "tqdm>=4.42.1,<5" "pyee>=11.0.0,<12"
+# ── Browser automation (rendering) ───────────────────────────
+playwright>=1.40.0
+
+# ── Google AI (Gemini) ────────────────────────────────────────
+google-genai>=1.0.0
+
+# NOTE: after pip install, run:  python -m playwright install chromium

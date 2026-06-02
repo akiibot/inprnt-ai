@@ -1,9 +1,12 @@
 """
 Imprnt AI — Phase 2: Brands Router
 POST /api/brands/upload
+POST /api/brands/load-demo
 GET  /api/brands/{brand_id}
 """
+import json
 import uuid
+from pathlib import Path as FilePath
 from typing import Annotated
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile, Path
@@ -13,7 +16,15 @@ from models.brand import BrandUploadResponse, Brand
 from services.gemini import extract_brand
 from services.colorthief_service import extract_colors
 from services.removebg import remove_background
-from services.supabase_client import upload_file_to_storage, save_brand, get_brand, supabase, get_supabase
+from services.supabase_client import upload_file_to_storage, save_brand, get_brand, supabase, get_supabase, _load_demo_brand, _MOCK_DATA_DIR
+
+_DEMO_EID_PROMPT = (
+    "Design an Eid Special Edition Launch campaign. Position Volt BD as the energy drink "
+    "of festive gatherings. Use bold Eid motifs — crescents, stars, warm gold — against "
+    "Volt's signature black-and-orange palette. Primary CTA in Bangla: "
+    "'ঈদের শক্তি, Volt-এর সাথে'. English sub-copy: 'Power Your Eid.' "
+    "High-energy, celebratory, unapologetically bold."
+)
 
 router = APIRouter(tags=["Brands"])
 
@@ -132,6 +143,31 @@ async def get_brand_endpoint(brand_id: str):
         return Brand(**brand_data)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to parse database record: {e}")
+
+
+@router.post("/brands/load-demo")
+async def load_demo_brand():
+    """
+    Load the Volt BD demo brand from mock-data without requiring PDF/logo upload.
+    Returns brand_id + the Eid campaign prompt so the frontend can skip the wizard.
+    """
+    brand_data = _load_demo_brand()
+    try:
+        brand = Brand(**{**brand_data, "brand_id": brand_data.get("id", "volt-bd-demo-001")})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Demo brand schema error: {e}")
+
+    # Load the pre-set Eid prompt from cached_posters.json if available
+    try:
+        cached_path = _MOCK_DATA_DIR / "cached_posters.json"
+        prompt = _DEMO_EID_PROMPT
+        if cached_path.exists():
+            cached = json.loads(cached_path.read_text(encoding="utf-8"))
+            prompt = cached.get("prompt", _DEMO_EID_PROMPT)
+    except Exception:
+        prompt = _DEMO_EID_PROMPT
+
+    return {"brand_id": "volt-bd-demo-001", "brand": brand, "prompt": prompt}
 
 
 @router.post("/brands/{brand_id}/product")

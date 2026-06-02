@@ -276,3 +276,138 @@
   font-weight: 600;
   font-size: 0.875rem;
 }
+
+/* ── Adherence toggle ── */
+.adherenceToggle {
+  display: flex;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  width: fit-content;
+  margin-bottom: var(--space-2);
+}
+
+.adherenceBtn {
+  padding: var(--space-2) var(--space-5);
+  background: transparent;
+  border: none;
+  color: var(--color-grey-400);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: var(--transition-fast);
+}
+
+.adherenceBtn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-white);
+}
+
+.adherenceBtnActive {
+  background: var(--color-primary);
+  color: var(--color-white);
+  font-weight: 600;
+}
+
+.adherenceHint {
+  font-size: 0.8rem;
+  color: var(--color-grey-600);
+  margin-top: var(--space-1);
+}
+
+/* ── Blueprint card ── */
+.blueprintCard {
+  margin-top: var(--space-8);
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.blueprintSummary {
+  padding: var(--space-4) var(--space-5);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: var(--color-white);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.blueprintSummary:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.blueprintBody {
+  padding: var(--space-4) var(--space-5) var(--space-5);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.blueprintStrategy {
+  font-size: 0.875rem;
+  color: var(--color-grey-400);
+  line-height: 1.6;
+}
+
+.blueprintSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.blueprintLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.blueprintValue {
+  font-size: 0.8rem;
+  color: var(--color-grey-400);
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.blueprintLayers {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.blueprintLayer {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: 0.8rem;
+}
+
+.layerType {
+  font-family: monospace;
+  font-size: 0.75rem;
+  background: rgba(255, 75, 0, 0.15);
+  color: var(--color-primary);
+  padding: 1px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.layerContent {
+  color: var(--color-grey-400);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 320px;
+}
+
+/* ── resultImageWrapper1x1 (explicit alias for base class) ── */
+.resultImageWrapper1x1 {
+  aspect-ratio: 1/1;
+}

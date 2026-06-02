@@ -25,6 +25,92 @@ from pathlib import Path
 from typing import Optional
 
 
+# ── Font loading ──────────────────────────────────────────────────────────────
+
+_FONTS_DIR = Path(__file__).parent.parent / "fonts"
+
+# Maps (font-family, weight) → filename in _FONTS_DIR
+_FONT_FILES: list[tuple[str, str, str]] = [
+    ("Anton",             "400", "Anton-Regular.woff2"),
+    ("Inter",             "400", "Inter-Regular.woff2"),
+    ("Inter",             "500", "Inter-Medium.woff2"),
+    ("Inter",             "600", "Inter-SemiBold.woff2"),
+    ("Inter",             "700", "Inter-Bold.woff2"),
+    ("Hind Siliguri",     "400", "HindSiliguri-Regular.woff2"),
+    ("Hind Siliguri",     "600", "HindSiliguri-SemiBold.woff2"),
+    ("Hind Siliguri",     "700", "HindSiliguri-Bold.woff2"),
+    ("Noto Sans Bengali", "400", "NotoSansBengali-Regular.woff2"),
+    ("Noto Sans Bengali", "500", "NotoSansBengali-Medium.woff2"),
+    ("Noto Sans Bengali", "600", "NotoSansBengali-SemiBold.woff2"),
+    ("Noto Sans Bengali", "700", "NotoSansBengali-Bold.woff2"),
+]
+
+_GOOGLE_FONTS_IMPORT = (
+    "@import url('https://fonts.googleapis.com/css2?"
+    "family=Anton"
+    "&family=Hind+Siliguri:wght@400;600;700"
+    "&family=Inter:wght@400;500;600;700"
+    "&family=Noto+Sans+Bengali:wght@400;500;600;700"
+    "&display=swap');"
+)
+
+
+# Only these 4 families are embedded. Any other font Gemini picks (Bebas Neue,
+# DM Sans, Oswald, etc.) must be snapped to one of these or it renders as the
+# browser default sans-serif (no @import — we're offline).
+_EMBEDDED_LATIN = {"Anton", "Inter"}
+_EMBEDDED_BENGALI = {"Hind Siliguri", "Noto Sans Bengali"}
+
+
+def _has_bengali(text: str) -> bool:
+    """True if the string contains any Bengali-script codepoint (U+0980–U+09FF)."""
+    return any("ঀ" <= ch <= "৿" for ch in text)
+
+
+def _snap_font_family(font_family: str, font_size: int, content: str) -> str:
+    """
+    Map any requested font onto an embedded family so it always renders.
+    - Bengali content → Hind Siliguri (display) or Noto Sans Bengali (body)
+    - Latin content   → Anton (display, size >= 44) or Inter (body)
+    Already-embedded families pass through unchanged.
+    """
+    if _has_bengali(content):
+        if font_family in _EMBEDDED_BENGALI:
+            return font_family
+        return "Hind Siliguri" if font_size >= 44 else "Noto Sans Bengali"
+    if font_family in _EMBEDDED_LATIN:
+        return font_family
+    return "Anton" if font_size >= 44 else "Inter"
+
+
+def _build_fonts_css() -> str:
+    """
+    Return font CSS. Uses locally cached woff2 base64 data URIs when all four
+    font families are present in backend/fonts/ — making renders fully offline.
+    Falls back to the Google Fonts @import when any font file is missing.
+    """
+    if not _FONTS_DIR.exists():
+        return _GOOGLE_FONTS_IMPORT
+
+    blocks: list[str] = []
+    for family, weight, filename in _FONT_FILES:
+        fp = _FONTS_DIR / filename
+        if not fp.exists():
+            # At least one font missing — fall back to network import
+            return _GOOGLE_FONTS_IMPORT
+        b64 = base64.b64encode(fp.read_bytes()).decode("ascii")
+        blocks.append(
+            f"@font-face {{\n"
+            f"  font-family: '{family}';\n"
+            f"  font-weight: {weight};\n"
+            f"  font-style: normal;\n"
+            f"  font-display: block;\n"
+            f"  src: url('data:font/woff2;base64,{b64}') format('woff2');\n"
+            f"}}"
+        )
+    return "\n".join(blocks)
+
+
 # ── Position keyword → CSS ────────────────────────────────────────────────────
 
 POSITION_CSS: dict[str, str] = {
@@ -116,8 +202,10 @@ def _render_text(layer: dict) -> str:
     margin_css = _margin_css(margin)
     max_w_css = f"max-width:{max_width}px;" if max_width else ""
 
-    # Determine if Bengali font — set lang attribute accordingly
-    is_bn = any(bn in font_family for bn in ["Siliguri", "Bengali", "Noto Sans Bengali"])
+    # Snap to an embedded font (Bebas Neue, DM Sans, etc. → Anton/Inter) so it
+    # never falls back to the browser default. Detect Bengali from the content.
+    is_bn = _has_bengali(content)
+    font_family = _snap_font_family(font_family, font_size, content)
     lang_attr = 'lang="bn"' if is_bn else 'lang="en"'
 
     # CTA button variant
@@ -248,14 +336,16 @@ def build_html(blueprint: dict, brand: dict, assets: dict) -> str:
     layers_html = "\n    ".join(layer_html_parts)
 
     # ── Assemble HTML ─────────────────────────────────────────────
+    fonts_css = _build_fonts_css()
+
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width={width}, initial-scale=1.0" />
 <style>
-  /* ── Google Fonts — ALL 4 FONTS LOADED FROM PHASE 1 DAY ONE ── */
-  @import url('https://fonts.googleapis.com/css2?family=Anton&family=Hind+Siliguri:wght@400;600;700&family=Inter:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap');
+  /* ── Fonts (embedded base64 when backend/fonts/ exists, else Google Fonts) ── */
+  {fonts_css}
 
   * {{
     box-sizing: border-box;

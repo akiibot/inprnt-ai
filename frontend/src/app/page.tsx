@@ -2,19 +2,31 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { checkHealth } from "@/lib/api";
 import type { HealthResponse } from "@/lib/types";
 import styles from "./page.module.css";
 
 export default function HomePage() {
+  const router = useRouter();
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [healthError, setHealthError] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
 
   useEffect(() => {
     checkHealth()
       .then(setHealth)
       .catch(() => setHealthError(true));
   }, []);
+
+  const handleTryDemo = async () => {
+    setDemoLoading(true);
+    try {
+      router.push("/create?demo=1");
+    } finally {
+      setDemoLoading(false);
+    }
+  };
 
   return (
     <main className={styles.main}>
@@ -71,6 +83,16 @@ export default function HomePage() {
               <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </Link>
+          <button
+            className={styles.ctaDemo}
+            onClick={handleTryDemo}
+            disabled={demoLoading}
+          >
+            {demoLoading ? "Loading…" : "Try Volt BD Demo"}
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M8 3v10M3 8l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
         </div>
 
         {/* ── Bengali tagline ── */}
