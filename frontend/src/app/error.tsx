@@ -17,30 +17,30 @@ export default function Error({
     <main
       style={{
         minHeight: "100vh",
-        background: "#0A0A0A",
+        background: "var(--color-bg)",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
         gap: "1.5rem",
-        fontFamily: "Inter, sans-serif",
-        color: "#fff",
+        fontFamily: "var(--font-body-en)",
+        color: "var(--color-white)",
         padding: "2rem",
       }}
     >
-      <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#FF4B00" }}>
+      <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--color-primary)" }}>
         Something went wrong
       </h2>
-      <p style={{ color: "#999", fontSize: "0.95rem", textAlign: "center", maxWidth: 400 }}>
+      <p style={{ color: "var(--color-grey-400)", fontSize: "0.95rem", textAlign: "center", maxWidth: 400 }}>
         {error.message || "An unexpected error occurred."}
       </p>
       <button
         onClick={reset}
         style={{
-          background: "#FF4B00",
-          color: "#fff",
+          background: "var(--color-primary)",
+          color: "var(--color-bg)",
           border: "none",
-          borderRadius: "8px",
+          borderRadius: "var(--radius-md)",
           padding: "0.75rem 2rem",
           fontSize: "0.95rem",
           fontWeight: 600,

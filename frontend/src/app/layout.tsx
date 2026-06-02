@@ -43,7 +43,7 @@ export default function RootLayout({
 }) {
   return (
     <html
-      lang="en"
+      lang="en-BD"
       className={`${anton.variable} ${inter.variable} ${hindSiliguri.variable} ${notoSansBengali.variable}`}
     >
       <body>{children}</body>

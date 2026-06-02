@@ -160,6 +160,8 @@
 .ctaRow {
   display: flex;
   align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
   gap: var(--space-4);
   margin-bottom: var(--space-8);
 }
@@ -259,8 +261,9 @@
 }
 
 .featureIcon {
-  font-size: 32px;
+  color: var(--color-primary);
   margin-bottom: var(--space-4);
+  display: flex;
 }
 
 .featureTitle {

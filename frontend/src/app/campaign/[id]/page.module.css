@@ -1,0 +1,212 @@
+.page {
+  min-height: 100vh;
+  background: var(--color-bg);
+  color: var(--color-white);
+  padding: var(--space-6) var(--space-6) var(--space-16);
+}
+
+.inner {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* ── Back link ── */
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-grey-400);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  margin-bottom: var(--space-8);
+  transition: color var(--transition-fast);
+}
+
+.backLink:hover {
+  color: var(--color-primary);
+}
+
+/* ── States ── */
+.stateText {
+  font-size: 1rem;
+  color: var(--color-grey-400);
+}
+
+.errorText {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+}
+
+/* ── Title ── */
+.title {
+  font-family: var(--font-heading-en);
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  letter-spacing: 0.02em;
+  margin-bottom: var(--space-4);
+}
+
+/* ── Chips row ── */
+.chips {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-8);
+}
+
+.chip {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  color: var(--color-grey-400);
+  background: var(--color-bg-elevated);
+}
+
+.chipPrimary {
+  color: var(--color-primary);
+  border-color: var(--color-primary-glow);
+  background: var(--color-primary-dim);
+}
+
+/* ── Section ── */
+.section {
+  margin-bottom: var(--space-10);
+}
+
+.sectionTitle {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+  margin-bottom: var(--space-3);
+}
+
+.sectionBody {
+  font-size: 0.9375rem;
+  color: var(--color-grey-400);
+  line-height: 1.7;
+}
+
+.sectionBodyItalic {
+  font-style: italic;
+  font-size: 0.875rem;
+  color: var(--color-grey-400);
+  line-height: 1.6;
+}
+
+/* ── Layer list ── */
+.layerList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.layerRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  font-size: 0.875rem;
+}
+
+.layerTag {
+  font-family: monospace;
+  font-size: 0.75rem;
+  background: var(--color-primary-dim);
+  color: var(--color-primary);
+  padding: 2px 8px;
+  border-radius: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.layerContent {
+  color: var(--color-grey-400);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 500px;
+}
+
+/* ── Poster grid ── */
+.posterGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6);
+  align-items: flex-start;
+}
+
+.posterCard {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: var(--transition-normal);
+  flex-shrink: 0;
+}
+
+.posterCard:hover {
+  border-color: var(--color-border-hover);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+.posterImage1x1 {
+  position: relative;
+  width: 240px;
+  height: 240px;
+  background: #000;
+}
+
+.posterImage9x16 {
+  position: relative;
+  width: 160px;
+  height: 284px;
+  background: #000;
+}
+
+.posterImage16x9 {
+  position: relative;
+  width: 340px;
+  height: 191px;
+  background: #000;
+}
+
+.posterFooter {
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.posterLabel {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-grey-400);
+}
+
+.downloadLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  color: var(--color-grey-400);
+  text-decoration: none;
+  transition: var(--transition-fast);
+}
+
+.downloadLink:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-dim);
+}

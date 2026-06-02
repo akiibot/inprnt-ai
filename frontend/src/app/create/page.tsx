@@ -2,8 +2,12 @@
 
 import React, { useState, useRef, useEffect, Suspense } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { UploadCloud, Check, ChevronRight, Loader2, Play, Download, Zap } from "lucide-react";
+import {
+  UploadCloud, Check, ChevronRight, Loader2,
+  Play, Download, Zap, ArrowLeft,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import styles from "./create.module.css";
 import {
@@ -15,6 +19,60 @@ import type { AdherenceLevel, Blueprint, ExportResult } from "@/lib/types";
 
 type Step = "UPLOAD_BRAND" | "UPLOAD_PRODUCT" | "PROMPT" | "GENERATING" | "RESULTS";
 
+const STEP_LABELS = ["Brand", "Product", "Prompt", "Generating", "Results"];
+
+function UploadZone({
+  label,
+  file,
+  accept,
+  inputRef,
+  onFile,
+  hint,
+}: {
+  label: string;
+  file: File | null;
+  accept: string;
+  inputRef: React.RefObject<HTMLInputElement>;
+  onFile: (f: File) => void;
+  hint: string;
+}) {
+  const [dragOver, setDragOver] = useState(false);
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const f = e.dataTransfer.files[0];
+    if (f) onFile(f);
+  };
+
+  return (
+    <div className={styles.inputGroup}>
+      <label className={styles.label}>{label}</label>
+      <div
+        className={`${styles.uploadZone} ${dragOver ? styles.uploadZoneDragOver : ""}`}
+        onClick={() => inputRef.current?.click()}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") inputRef.current?.click(); }}
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={handleDrop}
+        role="button"
+        tabIndex={0}
+        aria-label={hint}
+      >
+        <UploadCloud className={`${styles.uploadIcon} ${file ? styles.uploadIconDone : ""}`} />
+        <p>{file ? `✓ ${file.name}` : hint}</p>
+      </div>
+      <input
+        type="file"
+        ref={inputRef}
+        className={styles.fileInput}
+        accept={accept}
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }}
+      />
+    </div>
+  );
+}
+
 function CreateCampaignInner() {
   const searchParams = useSearchParams();
   const isDemo = searchParams.get("demo") === "1";
@@ -24,8 +82,8 @@ function CreateCampaignInner() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [demoBrandId, setDemoBrandId] = useState<string | null>(null);
   const [demoLoadError, setDemoLoadError] = useState<string | null>(null);
+  const [campaignId, setCampaignId] = useState<string | null>(null);
 
-  // Files
   const [brandPdf, setBrandPdf] = useState<File | null>(null);
   const [brandLogo, setBrandLogo] = useState<File | null>(null);
   const [productImage, setProductImage] = useState<File | null>(null);
@@ -34,7 +92,6 @@ function CreateCampaignInner() {
   const [results, setResults] = useState<ExportResult[]>([]);
   const [lastBlueprint, setLastBlueprint] = useState<Blueprint | null>(null);
 
-  // Heartbeat
   const [heartbeatSecs, setHeartbeatSecs] = useState(0);
   const lastLogTimeRef = useRef<number>(Date.now());
 
@@ -43,12 +100,10 @@ function CreateCampaignInner() {
   const productInputRef = useRef<HTMLInputElement>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll logs
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
 
-  // Reset heartbeat timer whenever a new log line arrives
   useEffect(() => {
     if (logs.length > 0) {
       lastLogTimeRef.current = Date.now();
@@ -56,7 +111,6 @@ function CreateCampaignInner() {
     }
   }, [logs]);
 
-  // Tick heartbeat every second while pipeline is running
   useEffect(() => {
     if (!isProcessing) { setHeartbeatSecs(0); return; }
     const timer = setInterval(() => {
@@ -65,7 +119,6 @@ function CreateCampaignInner() {
     return () => clearInterval(timer);
   }, [isProcessing]);
 
-  // Demo mode: load brand on mount and skip to PROMPT step
   useEffect(() => {
     if (!isDemo) return;
     loadDemoBrand()
@@ -83,9 +136,17 @@ function CreateCampaignInner() {
   };
 
   const handleNext = () => {
-    if (currentStep === "UPLOAD_BRAND") setCurrentStep("UPLOAD_PRODUCT");
-    else if (currentStep === "UPLOAD_PRODUCT") setCurrentStep("PROMPT");
-    else if (currentStep === "PROMPT") isDemo && demoBrandId ? handleDemoGenerate() : handleGenerate();
+    if (currentStep === "UPLOAD_BRAND") {
+      setCurrentStep("UPLOAD_PRODUCT");
+    } else if (currentStep === "UPLOAD_PRODUCT") {
+      setCurrentStep("PROMPT");
+    } else if (currentStep === "PROMPT") {
+      if (isDemo && demoBrandId) {
+        handleDemoGenerate();
+      } else {
+        handleGenerate();
+      }
+    }
   };
 
   const handleDemoGenerate = async () => {
@@ -98,6 +159,7 @@ function CreateCampaignInner() {
       addLog("Demo mode: loading Volt BD brand from mock data...");
       addLog("Calling campaigns/generate-all (serving cached demo posters)...");
       const res = await runDemoGenerate(demoBrandId, prompt, adherenceLevel);
+      setCampaignId(res.campaign_id);
       const mapped: ExportResult[] = res.formats.map((f) => ({
         format_name: f.name,
         url: f.poster_url,
@@ -150,6 +212,7 @@ function CreateCampaignInner() {
 
       addLog("Phase 4/5: Generating Flux background and rendering poster...");
       const genRes = await generateCampaign(planRes.blueprint);
+      setCampaignId(genRes.campaign_id);
       addLog("✅ 1:1 poster rendered.");
 
       addLog("Phase 5/5: Rendering 9:16 and 16:9 formats...");
@@ -172,10 +235,26 @@ function CreateCampaignInner() {
     }
   };
 
+  const handleStartNew = () => {
+    setResults([]);
+    setLogs([]);
+    setCampaignId(null);
+    if (isDemo) {
+      setCurrentStep("PROMPT");
+    } else {
+      setCurrentStep("UPLOAD_BRAND");
+      setBrandPdf(null);
+      setBrandLogo(null);
+      setProductImage(null);
+      setPrompt("");
+      setDemoBrandId(null);
+      setLastBlueprint(null);
+    }
+  };
+
   const steps = ["UPLOAD_BRAND", "UPLOAD_PRODUCT", "PROMPT", "GENERATING", "RESULTS"];
   const stepIndex = steps.indexOf(currentStep);
 
-  // Last log line label for heartbeat display
   const lastLogLabel = (() => {
     const last = logs[logs.length - 1] ?? "";
     const m = last.match(/\] (.+)/);
@@ -185,13 +264,20 @@ function CreateCampaignInner() {
   if (isDemo && demoLoadError) {
     return (
       <div className={styles.container}>
-        <p style={{ color: "red", padding: "2rem" }}>Demo load failed: {demoLoadError}</p>
+        <div className={styles.errorState}>Demo load failed: {demoLoadError}</div>
       </div>
     );
   }
 
   return (
     <div className={styles.container}>
+      <nav className={styles.backNav}>
+        <Link href="/" className={styles.backLink}>
+          <ArrowLeft size={15} />
+          Imprnt AI
+        </Link>
+      </nav>
+
       <header className={styles.header}>
         <h1 className={styles.title}>{isDemo ? "Volt BD Demo" : "New Campaign"}</h1>
         <p className={styles.subtitle}>
@@ -202,13 +288,21 @@ function CreateCampaignInner() {
       </header>
 
       {/* Stepper */}
-      <div className={styles.stepper}>
-        {[1, 2, 3, 4, 5].map((step, idx) => (
+      <div
+        className={styles.stepper}
+        style={{ "--step-progress": `${(stepIndex / (steps.length - 1)) * 100}%` } as React.CSSProperties}
+      >
+        {STEP_LABELS.map((label, idx) => (
           <div
-            key={step}
-            className={`${styles.step} ${stepIndex === idx ? styles.stepActive : ""} ${stepIndex > idx ? styles.stepCompleted : ""}`}
+            key={label}
+            className={`${styles.stepWrapper} ${stepIndex === idx ? styles.stepWrapperActive : ""} ${stepIndex > idx ? styles.stepWrapperCompleted : ""}`}
           >
-            {stepIndex > idx ? <Check size={20} /> : step}
+            <div
+              className={`${styles.step} ${stepIndex === idx ? styles.stepActive : ""} ${stepIndex > idx ? styles.stepCompleted : ""}`}
+            >
+              {stepIndex > idx ? <Check size={16} /> : idx + 1}
+            </div>
+            <span className={styles.stepLabel}>{label}</span>
           </div>
         ))}
       </div>
@@ -222,52 +316,53 @@ function CreateCampaignInner() {
           transition={{ duration: 0.3 }}
           className={styles.content}
         >
-          {/* STEP 1 — Upload Brand */}
           {currentStep === "UPLOAD_BRAND" && (
             <div>
               <h2 className={styles.cardTitle}>1. Brand Identity</h2>
-              <div className={styles.inputGroup}>
-                <label className={styles.label}>Brand Guidelines (PDF)</label>
-                <div className={styles.uploadZone} onClick={() => brandInputRef.current?.click()}>
-                  <UploadCloud className={styles.uploadIcon} />
-                  <p>{brandPdf ? brandPdf.name : "Click to upload brand_guidelines.pdf"}</p>
-                </div>
-                <input type="file" ref={brandInputRef} className={styles.fileInput} accept=".pdf"
-                  onChange={(e) => setBrandPdf(e.target.files?.[0] || null)} />
-              </div>
-              <div className={styles.inputGroup}>
-                <label className={styles.label}>Brand Logo (PNG/SVG)</label>
-                <div className={styles.uploadZone} onClick={() => logoInputRef.current?.click()}>
-                  <UploadCloud className={styles.uploadIcon} />
-                  <p>{brandLogo ? brandLogo.name : "Click to upload transparent logo"}</p>
-                </div>
-                <input type="file" ref={logoInputRef} className={styles.fileInput} accept="image/png, image/svg+xml"
-                  onChange={(e) => setBrandLogo(e.target.files?.[0] || null)} />
-              </div>
+              <UploadZone
+                label="Brand Guidelines (PDF)"
+                file={brandPdf}
+                accept=".pdf"
+                inputRef={brandInputRef}
+                onFile={setBrandPdf}
+                hint="Click or drag to upload brand_guidelines.pdf"
+              />
+              <UploadZone
+                label="Brand Logo (PNG/SVG)"
+                file={brandLogo}
+                accept="image/png, image/svg+xml"
+                inputRef={logoInputRef}
+                onFile={setBrandLogo}
+                hint="Click or drag to upload transparent logo"
+              />
               <div className={styles.actions}>
-                <button className={`${styles.button} ${styles.buttonPrimary}`} onClick={handleNext}
-                  disabled={!brandPdf || !brandLogo}>
+                <button
+                  className={`${styles.button} ${styles.buttonPrimary}`}
+                  onClick={handleNext}
+                  disabled={!brandPdf || !brandLogo}
+                >
                   Next Step <ChevronRight size={18} />
                 </button>
               </div>
             </div>
           )}
 
-          {/* STEP 2 — Upload Product */}
           {currentStep === "UPLOAD_PRODUCT" && (
             <div>
-              <h2 className={styles.cardTitle}>2. Product Focus (Optional)</h2>
-              <p style={{ color: "var(--color-grey-400)", marginBottom: "var(--space-6)" }}>
+              <h2 className={styles.cardTitle}>
+                2. Product Focus <span className={styles.optionalTag}>Optional</span>
+              </h2>
+              <p className={styles.stepDescription}>
                 Upload an image of the product. Our AI will automatically remove the background.
               </p>
-              <div className={styles.inputGroup}>
-                <div className={styles.uploadZone} onClick={() => productInputRef.current?.click()}>
-                  <UploadCloud className={styles.uploadIcon} />
-                  <p>{productImage ? productImage.name : "Click to upload product image"}</p>
-                </div>
-                <input type="file" ref={productInputRef} className={styles.fileInput} accept="image/*"
-                  onChange={(e) => setProductImage(e.target.files?.[0] || null)} />
-              </div>
+              <UploadZone
+                label="Product Image"
+                file={productImage}
+                accept="image/*"
+                inputRef={productInputRef}
+                onFile={setProductImage}
+                hint="Click or drag to upload product image"
+              />
               <div className={styles.actions}>
                 <button className={styles.button} onClick={() => setCurrentStep("UPLOAD_BRAND")}>Back</button>
                 <button className={`${styles.button} ${styles.buttonPrimary}`} onClick={handleNext}>
@@ -277,11 +372,10 @@ function CreateCampaignInner() {
             </div>
           )}
 
-          {/* STEP 3 — Prompt + Adherence */}
           {currentStep === "PROMPT" && (
             <div>
               <h2 className={styles.cardTitle}>3. Campaign Prompt</h2>
-              <p style={{ color: "var(--color-grey-400)", marginBottom: "var(--space-4)" }}>
+              <p className={styles.stepDescription}>
                 Describe the campaign goals, vibe, and any specific requirements.
               </p>
 
@@ -294,9 +388,11 @@ function CreateCampaignInner() {
                 />
               </div>
 
-              {/* Adherence slider */}
               <div className={styles.inputGroup}>
                 <label className={styles.label}>Creative Adherence</label>
+                <p className={styles.adherenceDescription}>
+                  How closely should the AI follow your brand guidelines?
+                </p>
                 <div className={styles.adherenceToggle}>
                   {(["creative", "moderate", "strict"] as const).map((level) => (
                     <button
@@ -321,8 +417,11 @@ function CreateCampaignInner() {
                 {!isDemo && (
                   <button className={styles.button} onClick={() => setCurrentStep("UPLOAD_PRODUCT")}>Back</button>
                 )}
-                <button className={`${styles.button} ${styles.buttonPrimary}`} onClick={handleNext}
-                  disabled={!prompt.trim()}>
+                <button
+                  className={`${styles.button} ${styles.buttonPrimary}`}
+                  onClick={handleNext}
+                  disabled={!prompt.trim()}
+                >
                   {isDemo ? <Zap size={18} /> : <Play size={18} />}
                   {isDemo ? "Generate Demo" : "Generate Campaign"}
                 </button>
@@ -330,7 +429,6 @@ function CreateCampaignInner() {
             </div>
           )}
 
-          {/* STEP 4 — Generating */}
           {currentStep === "GENERATING" && (
             <div>
               <h2 className={styles.cardTitle}>
@@ -341,7 +439,6 @@ function CreateCampaignInner() {
                 {logs.map((log, i) => (
                   <div key={i} className={styles.logLine}>{log}</div>
                 ))}
-                {/* Heartbeat: shows elapsed seconds if no new log for >3s */}
                 {isProcessing && heartbeatSecs >= 3 && (
                   <div className={styles.logLine} style={{ color: "#ffaa00", opacity: 0.85 }}>
                     ⏳ {lastLogLabel}... {heartbeatSecs}s
@@ -357,41 +454,54 @@ function CreateCampaignInner() {
             </div>
           )}
 
-          {/* STEP 5 — Results */}
           {currentStep === "RESULTS" && (
             <div>
               <h2 className={styles.cardTitle} style={{ color: "var(--color-primary)" }}>
                 <Check size={28} /> Campaign Generated!
               </h2>
-              <p style={{ color: "var(--color-grey-400)", marginBottom: "var(--space-6)" }}>
+              <p className={styles.stepDescription}>
                 Gemini designed the blueprint. Flux generated the background. Playwright rendered Bangla + English typography perfectly.
               </p>
 
               <div className={styles.resultsGrid}>
                 {results.map((res, i) => (
                   <div key={i} className={styles.resultCard}>
-                    <div className={`${styles.resultImageWrapper} ${
-                      res.aspect_ratio === "9:16" ? styles.resultImageWrapper9x16 :
-                      res.aspect_ratio === "16:9" ? styles.resultImageWrapper16x9 :
-                      styles.resultImageWrapper1x1
-                    }`}>
-                      <Image src={res.url} alt={res.format_name} fill className={styles.resultImage} unoptimized />
+                    <div
+                      className={`${styles.resultImageWrapper} ${
+                        res.aspect_ratio === "9:16"
+                          ? styles.resultImageWrapper9x16
+                          : res.aspect_ratio === "16:9"
+                          ? styles.resultImageWrapper16x9
+                          : styles.resultImageWrapper1x1
+                      }`}
+                    >
+                      <Image
+                        src={res.url}
+                        alt={res.format_name}
+                        fill
+                        className={styles.resultImage}
+                        unoptimized
+                      />
                     </div>
                     <div className={styles.resultFooter}>
                       <span className={styles.resultFormat}>{res.format_name}</span>
-                      <a href={res.url} target="_blank" rel="noreferrer"
-                        className={styles.button} style={{ padding: "var(--space-2)" }}>
+                      <a
+                        href={res.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={styles.downloadBtn}
+                        aria-label={`Download ${res.format_name}`}
+                      >
                         <Download size={16} />
                       </a>
                     </div>
                   </div>
                 ))}
                 {results.length === 0 && (
-                  <div style={{ color: "red" }}>Pipeline failed. Check logs above.</div>
+                  <div className={styles.errorState}>Pipeline failed. Check logs above.</div>
                 )}
               </div>
 
-              {/* Blueprint insight card */}
               {lastBlueprint && (
                 <details className={styles.blueprintCard}>
                   <summary className={styles.blueprintSummary}>
@@ -399,14 +509,12 @@ function CreateCampaignInner() {
                   </summary>
                   <div className={styles.blueprintBody}>
                     <p className={styles.blueprintStrategy}>{lastBlueprint.campaign_strategy}</p>
-
                     {lastBlueprint.background?.prompt && (
                       <div className={styles.blueprintSection}>
                         <span className={styles.blueprintLabel}>Flux Background Prompt</span>
                         <p className={styles.blueprintValue}>{lastBlueprint.background.prompt}</p>
                       </div>
                     )}
-
                     <div className={styles.blueprintSection}>
                       <span className={styles.blueprintLabel}>
                         Design Elements ({lastBlueprint.layers?.length ?? 0} layers)
@@ -427,12 +535,13 @@ function CreateCampaignInner() {
               )}
 
               <div className={styles.actions} style={{ marginTop: "var(--space-10)" }}>
-                <button className={styles.button} onClick={() => {
-                  setCurrentStep("UPLOAD_BRAND");
-                  setBrandPdf(null); setBrandLogo(null); setProductImage(null);
-                  setPrompt(""); setDemoBrandId(null); setLastBlueprint(null);
-                }}>
-                  Start New Campaign
+                {campaignId && (
+                  <Link href={`/campaign/${campaignId}`} className={styles.button}>
+                    View Details
+                  </Link>
+                )}
+                <button className={`${styles.button} ${styles.buttonPrimary}`} onClick={handleStartNew}>
+                  {isDemo ? "Generate Again" : "Start New Campaign"}
                 </button>
               </div>
             </div>

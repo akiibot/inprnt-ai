@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Brain, Palette, LayoutGrid, ChevronRight } from "lucide-react";
 import { checkHealth } from "@/lib/api";
 import type { HealthResponse } from "@/lib/types";
 import styles from "./page.module.css";
@@ -30,10 +31,8 @@ export default function HomePage() {
 
   return (
     <main className={styles.main}>
-      {/* ── Background glow ── */}
       <div className={styles.bgGlow} aria-hidden="true" />
 
-      {/* ── Nav ── */}
       <nav className={styles.nav}>
         <div className={styles.logo}>
           <span className={styles.logoMark}>⚡</span>
@@ -56,7 +55,6 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* ── Hero ── */}
       <section className={styles.hero}>
         <div className={styles.eyebrow}>
           AI BuildFest 2026 · Track 2: MarTech
@@ -79,9 +77,7 @@ export default function HomePage() {
         <div className={styles.ctaRow}>
           <Link href="/create" className={styles.ctaPrimary} id="cta-create">
             Start Creating
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <ChevronRight size={18} aria-hidden="true" />
           </Link>
           <button
             className={styles.ctaDemo}
@@ -89,30 +85,30 @@ export default function HomePage() {
             disabled={demoLoading}
           >
             {demoLoading ? "Loading…" : "Try Volt BD Demo"}
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path d="M8 3v10M3 8l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <ChevronRight size={16} aria-hidden="true" />
           </button>
         </div>
 
-        {/* ── Bengali tagline ── */}
         <p className={`${styles.bnTagline} font-bn`}>
           আপনার ব্র্যান্ড, আমাদের AI — মুহূর্তেই পোস্টার।
         </p>
       </section>
 
-      {/* ── Feature cards ── */}
       <section className={styles.features}>
-        {features.map((f) => (
-          <div key={f.title} className={styles.featureCard}>
-            <div className={styles.featureIcon}>{f.icon}</div>
-            <h3 className={styles.featureTitle}>{f.title}</h3>
-            <p className={styles.featureDesc}>{f.desc}</p>
-          </div>
-        ))}
+        {features.map((f) => {
+          const Icon = f.icon;
+          return (
+            <div key={f.title} className={styles.featureCard}>
+              <div className={styles.featureIcon}>
+                <Icon size={28} strokeWidth={1.5} aria-hidden="true" />
+              </div>
+              <h3 className={styles.featureTitle}>{f.title}</h3>
+              <p className={styles.featureDesc}>{f.desc}</p>
+            </div>
+          );
+        })}
       </section>
 
-      {/* ── API status strip ── */}
       {health && (
         <div className={styles.apiStrip}>
           Backend v{health.version} · {health.environment} · ✅ connected
@@ -124,17 +120,17 @@ export default function HomePage() {
 
 const features = [
   {
-    icon: "🧠",
+    icon: Brain,
     title: "AI Creative Director",
     desc: "Gemini 2.5 Pro reads your brand guidelines and writes a complete design blueprint — strategy, layout, copy, and color direction.",
   },
   {
-    icon: "🎨",
+    icon: Palette,
     title: "Hybrid Compositor",
     desc: "Cloudflare Workers AI generates the background. Puppeteer renders pixel-perfect typography in Bangla and English. Text never goes through an image model.",
   },
   {
-    icon: "📐",
+    icon: LayoutGrid,
     title: "Three Formats, One Click",
     desc: "Instagram Post (1:1), Instagram Story (9:16), and Facebook Cover (16:9) — all generated simultaneously with layout reflowed for each aspect ratio.",
   },
