@@ -1,6 +1,7 @@
 """
 Imprnt AI — Phase 2: Brands Router
 POST /api/brands/upload
+POST /api/brands/manual
 POST /api/brands/load-demo
 GET  /api/brands/{brand_id}
 """
@@ -11,6 +12,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile, Path
 import pdfplumber
+from pydantic import BaseModel
 
 from models.brand import BrandUploadResponse, Brand
 from services.gemini import extract_brand
@@ -168,6 +170,92 @@ async def load_demo_brand():
         prompt = _DEMO_EID_PROMPT
 
     return {"brand_id": "volt-bd-demo-001", "brand": brand, "prompt": prompt}
+
+
+class ManualBrandRequest(BaseModel):
+    """Request body for manual brand creation — mirrors brand.json exactly."""
+    brand_name: str
+    tagline: str
+    tagline_bn: str | None = None
+    industry: str
+    target_audience: str
+    brand_personality: list[str]
+    colors: dict
+    typography: dict
+    voice: dict
+    do_not_use: list[str]
+    logo_base64: str | None = None
+    logo_content_type: str = "image/png"
+    product_image_url: str | None = None
+
+
+@router.post("/brands/manual", response_model=BrandUploadResponse)
+async def create_brand_manually(request: ManualBrandRequest):
+    """
+    Create a brand profile manually (without PDF upload).
+    Accepts JSON matching the frozen brand.json schema + optional base64 logo.
+    """
+    import base64
+
+    brand_id = str(uuid.uuid4())
+    logo_url = None
+
+    # Handle logo base64 → Supabase Storage upload
+    if request.logo_base64:
+        try:
+            logo_bytes = base64.b64decode(request.logo_base64)
+            ext = "png" if "png" in request.logo_content_type else "jpg"
+            logo_filename = f"{brand_id}/logo_manual.{ext}"
+            logo_url = upload_file_to_storage(
+                "assets", logo_filename, logo_bytes, request.logo_content_type
+            )
+        except Exception as e:
+            print(f"Warning: Failed to upload manual logo: {e}")
+
+    # Build brand dict matching frozen schema
+    brand_dict = {
+        "brand_id": brand_id,
+        "brand_name": request.brand_name,
+        "tagline": request.tagline,
+        "tagline_bn": request.tagline_bn,
+        "industry": request.industry,
+        "target_audience": request.target_audience,
+        "brand_personality": request.brand_personality,
+        "colors": request.colors,
+        "typography": request.typography,
+        "logo_url": logo_url,
+        "product_image_url": request.product_image_url,
+        "voice": request.voice,
+        "do_not_use": request.do_not_use,
+    }
+
+    # Validate against frozen Brand model
+    try:
+        brand = Brand(**brand_dict)
+    except Exception as e:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Brand data failed schema validation: {e}",
+        )
+
+    # Save to Supabase DB (same path as upload flow)
+    try:
+        db_payload = brand.model_dump(mode="json")
+        db_payload["id"] = brand_id
+        db_payload["raw_data"] = brand.model_dump(mode="json")
+        del db_payload["brand_id"]
+        saved = save_brand(db_payload)
+        if not saved:
+            raise Exception("Insert returned no data")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database save failed: {e}")
+
+    return BrandUploadResponse(
+        brand_id=brand_id,
+        brand=brand,
+        colors_source="manual",
+        message="Brand created manually",
+    )
 
 
 @router.post("/brands/{brand_id}/product")

@@ -15,6 +15,7 @@ import type {
   GenerateAllResponse,
   ExportCampaignResponse,
   AspectRatio,
+  ManualBrandPayload,
 } from "./types";
 
 const API_BASE = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api`;
@@ -111,6 +112,15 @@ export async function getBrand(brandId: string): Promise<Brand> {
 
 export async function loadDemoBrand(): Promise<{ brand_id: string; brand: Brand; prompt: string }> {
   return request("/brands/load-demo", { method: "POST" });
+}
+
+export async function submitManualBrand(
+  data: ManualBrandPayload,
+): Promise<{ brand_id: string; brand: Brand; message: string }> {
+  return request("/brands/manual", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
 }
 
 export async function getCampaign(campaignId: string): Promise<Record<string, unknown>> {

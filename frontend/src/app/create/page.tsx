@@ -76,8 +76,9 @@ function UploadZone({
 function CreateCampaignInner() {
   const searchParams = useSearchParams();
   const isDemo = searchParams.get("demo") === "1";
+  const urlBrandId = searchParams.get("brand_id");
 
-  const [currentStep, setCurrentStep] = useState<Step>("UPLOAD_BRAND");
+  const [currentStep, setCurrentStep] = useState<Step>(urlBrandId ? "PROMPT" : "UPLOAD_BRAND");
   const [logs, setLogs] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [demoBrandId, setDemoBrandId] = useState<string | null>(null);
@@ -130,6 +131,12 @@ function CreateCampaignInner() {
       .catch((err) => setDemoLoadError(String(err)));
   }, [isDemo]);
 
+  useEffect(() => {
+    if (urlBrandId) {
+      setCurrentStep("PROMPT");
+    }
+  }, [urlBrandId]);
+
   const addLog = (msg: string) => {
     const time = new Date().toLocaleTimeString([], { hour12: false });
     setLogs((prev) => [...prev, `[${time}] ${msg}`]);
@@ -178,7 +185,9 @@ function CreateCampaignInner() {
   };
 
   const handleGenerate = async () => {
-    if (!brandPdf || !brandLogo || !prompt.trim()) return;
+    if (!prompt.trim()) return;
+    if (!urlBrandId && (!brandPdf || !brandLogo)) return;
+
     setCurrentStep("GENERATING");
     setIsProcessing(true);
     setLogs([]);
@@ -186,10 +195,16 @@ function CreateCampaignInner() {
     setLastBlueprint(null);
 
     try {
-      addLog("Phase 1/5: Uploading brand guidelines and logo...");
-      const brandRes = await uploadBrand(brandPdf, brandLogo);
-      const brandId = brandRes.brand_id;
-      addLog(`✅ Brand extracted via Gemini: ${brandRes.brand.brand_name}`);
+      let brandId = urlBrandId;
+
+      if (!brandId) {
+        addLog("Phase 1/5: Uploading brand guidelines and logo...");
+        const brandRes = await uploadBrand(brandPdf!, brandLogo!);
+        brandId = brandRes.brand_id;
+        addLog(`✅ Brand extracted via Gemini: ${brandRes.brand.brand_name}`);
+      } else {
+        addLog("Phase 1/5: Using manually created brand profile...");
+      }
 
       if (productImage) {
         addLog("Phase 2/5: Stripping background from product image via Remove.bg...");
@@ -319,30 +334,66 @@ function CreateCampaignInner() {
           {currentStep === "UPLOAD_BRAND" && (
             <div>
               <h2 className={styles.cardTitle}>1. Brand Identity</h2>
-              <UploadZone
-                label="Brand Guidelines (PDF)"
-                file={brandPdf}
-                accept=".pdf"
-                inputRef={brandInputRef}
-                onFile={setBrandPdf}
-                hint="Click or drag to upload brand_guidelines.pdf"
-              />
-              <UploadZone
-                label="Brand Logo (PNG/SVG)"
-                file={brandLogo}
-                accept="image/png, image/svg+xml"
-                inputRef={logoInputRef}
-                onFile={setBrandLogo}
-                hint="Click or drag to upload transparent logo"
-              />
-              <div className={styles.actions}>
-                <button
-                  className={`${styles.button} ${styles.buttonPrimary}`}
-                  onClick={handleNext}
-                  disabled={!brandPdf || !brandLogo}
-                >
-                  Next Step <ChevronRight size={18} />
-                </button>
+              
+              <div className={styles.formRow}>
+                {/* Upload Option */}
+                <div>
+                  <h3 className={styles.label} style={{ marginBottom: "var(--space-3)" }}>Option A: Upload Guidelines</h3>
+                  <UploadZone
+                    label="Brand Guidelines (PDF)"
+                    file={brandPdf}
+                    accept=".pdf"
+                    inputRef={brandInputRef}
+                    onFile={setBrandPdf}
+                    hint="Click or drag to upload brand_guidelines.pdf"
+                  />
+                  <UploadZone
+                    label="Brand Logo (PNG/SVG)"
+                    file={brandLogo}
+                    accept="image/png, image/svg+xml"
+                    inputRef={logoInputRef}
+                    onFile={setBrandLogo}
+                    hint="Click or drag to upload transparent logo"
+                  />
+                  <div className={styles.actions} style={{ marginTop: "var(--space-4)" }}>
+                    <button
+                      className={`${styles.button} ${styles.buttonPrimary}`}
+                      onClick={handleNext}
+                      disabled={!brandPdf || !brandLogo}
+                    >
+                      Next Step <ChevronRight size={18} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Manual Option */}
+                <div>
+                  <h3 className={styles.label} style={{ marginBottom: "var(--space-3)" }}>Option B: Build Manually</h3>
+                  <Link 
+                    href="/create/manual" 
+                    className={styles.uploadZone} 
+                    style={{ 
+                      display: "flex", 
+                      flexDirection: "column", 
+                      height: "calc(100% - 36px)", 
+                      minHeight: "280px",
+                      textDecoration: "none", 
+                      justifyContent: "center",
+                      alignItems: "center",
+                      gap: "var(--space-4)"
+                    }}
+                  >
+                    <div className={styles.uploadIcon} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Zap size={32} />
+                    </div>
+                    <div style={{ textAlign: "center" }}>
+                      <p style={{ color: "var(--color-white)", fontWeight: 600, fontSize: "1.1rem", marginBottom: "var(--space-2)" }}>Build Manually</p>
+                      <p style={{ color: "var(--color-grey-400)", fontSize: "0.9rem", maxWidth: "220px", margin: "0 auto", lineHeight: 1.5 }}>
+                        No PDF? No problem. Define your brand profile step by step.
+                      </p>
+                    </div>
+                  </Link>
+                </div>
               </div>
             </div>
           )}

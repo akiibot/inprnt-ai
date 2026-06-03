@@ -171,3 +171,35 @@ export interface HealthResponse {
   version: string;
   environment: string;
 }
+
+// ── Manual Brand Creation ────────────────────────────────────
+
+export interface ManualBrandPayload {
+  brand_name: string;
+  tagline: string;
+  tagline_bn: string | null;
+  industry: string;
+  target_audience: string;
+  brand_personality: string[];
+  colors: {
+    primary: string;
+    secondary: string;
+    accent: string;
+    palette: string[];
+  };
+  typography: {
+    heading_font: string;
+    heading_font_bn: string;
+    body_font: string;
+    body_font_bn: string;
+  };
+  voice: {
+    tone: string;
+    language: "en" | "bn" | "both";
+    formality: string;
+  };
+  do_not_use: string[];
+  logo_base64: string | null;
+  logo_content_type: string;
+  product_image_url: string | null;
+}

@@ -605,3 +605,446 @@
     height: 169px;
   }
 }
+
+/* ════════════════════════════════════════════════════════════════
+   Manual Brand Wizard — /create/manual
+   All new classes; nothing above is modified.
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── Step progress indicator ── */
+.manualStepper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-10);
+}
+
+.manualStepDot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-border);
+  transition: all var(--transition-normal);
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+
+.manualStepDot:hover {
+  background: var(--color-grey-400);
+}
+
+.manualStepDotActive {
+  background: var(--color-primary);
+  box-shadow: 0 0 10px var(--color-primary-glow);
+  transform: scale(1.3);
+}
+
+.manualStepDotCompleted {
+  background: var(--color-accent);
+}
+
+.manualStepConnector {
+  width: 24px;
+  height: 2px;
+  background: var(--color-border);
+  transition: background var(--transition-normal);
+}
+
+.manualStepConnectorDone {
+  background: var(--color-primary);
+}
+
+/* ── Text input ── */
+.textInput {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-white);
+  font-family: var(--font-body-en);
+  font-size: 0.9375rem;
+  transition: var(--transition-fast);
+}
+
+.textInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-dim);
+}
+
+.textInput::placeholder {
+  color: var(--color-grey-600);
+}
+
+/* ── Select input ── */
+.selectInput {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-white);
+  font-family: var(--font-body-en);
+  font-size: 0.9375rem;
+  transition: var(--transition-fast);
+  appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23999' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: var(--space-10);
+}
+
+.selectInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-dim);
+}
+
+.selectInput option {
+  background: #111;
+  color: var(--color-white);
+}
+
+/* ── Color picker ── */
+.colorGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-6);
+}
+
+.colorPickerGroup {
+  position: relative;
+}
+
+.colorSwatchRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  cursor: pointer;
+}
+
+.colorSwatch {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--color-border);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.colorSwatch:hover {
+  border-color: var(--color-grey-400);
+  transform: scale(1.08);
+}
+
+.colorSwatchActive {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 12px var(--color-primary-glow);
+}
+
+.colorHexInput {
+  width: 90px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-white);
+  font-family: monospace;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  transition: var(--transition-fast);
+}
+
+.colorHexInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.colorPopover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 50;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7);
+  animation: fadeIn 150ms ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Palette row ── */
+.paletteRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.paletteSwatch {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--color-border);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  position: relative;
+}
+
+.paletteSwatch:hover {
+  border-color: var(--color-grey-400);
+  transform: scale(1.1);
+}
+
+.paletteSwatchRemove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-full);
+  background: #f87171;
+  color: #fff;
+  border: none;
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.paletteSwatch:hover .paletteSwatchRemove {
+  opacity: 1;
+}
+
+/* ── Add button ── */
+.addButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: transparent;
+  border: 1px dashed var(--color-border);
+  color: var(--color-grey-400);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.addButton:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-dim);
+}
+
+/* ── Tag / personality chips ── */
+.chipGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.tagChip {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-grey-400);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.tagChip:hover {
+  border-color: var(--color-grey-400);
+  color: var(--color-white);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tagChipActive {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-dim);
+  font-weight: 600;
+}
+
+/* ── Do not use items ── */
+.doNotUseList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.doNotUseRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.removeButton {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-grey-400);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.removeButton:hover {
+  border-color: #f87171;
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.1);
+}
+
+/* ── Font preview ── */
+.fontPreviewGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.fontPreviewCard {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.fontPreviewLabel {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.fontPreviewText {
+  font-size: 1.5rem;
+  line-height: 1.3;
+  color: var(--color-white);
+}
+
+.fontPreviewTextSmall {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--color-grey-400);
+}
+
+/* ── Review sections ── */
+.reviewGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.reviewSection {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+}
+
+.reviewSectionFull {
+  grid-column: 1 / -1;
+}
+
+.reviewSectionTitle {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+  margin-bottom: var(--space-3);
+}
+
+.reviewValue {
+  font-size: 0.9375rem;
+  color: var(--color-white);
+  line-height: 1.5;
+}
+
+.reviewValueMuted {
+  color: var(--color-grey-400);
+  font-size: 0.8125rem;
+}
+
+.reviewColorRow {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.reviewColorDot {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+}
+
+/* ── Logo preview ── */
+.logoPreview {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--color-border);
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* ── Inline two-column layout ── */
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+}
+
+/* ── Success animation ── */
+.successPulse {
+  animation: successPulse 600ms ease;
+}
+
+@keyframes successPulse {
+  0% { transform: scale(0.95); opacity: 0.5; }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ── Mobile overrides for manual wizard ── */
+@media (max-width: 640px) {
+  .formRow {
+    grid-template-columns: 1fr;
+  }
+  .colorGrid {
+    grid-template-columns: 1fr;
+  }
+  .fontPreviewGrid {
+    grid-template-columns: 1fr;
+  }
+  .reviewGrid {
+    grid-template-columns: 1fr;
+  }
+}
