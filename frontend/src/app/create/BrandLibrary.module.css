@@ -1,0 +1,282 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: var(--space-4);
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: var(--space-1);
+}
+
+.card {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.card:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Logo area ── */
+.cardLogo {
+  position: relative;
+  height: 96px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.cardLogoImg {
+  object-fit: contain;
+  padding: 12px;
+}
+
+.cardLogoPlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: var(--color-grey-600);
+  text-transform: uppercase;
+}
+
+/* ── Card body ── */
+.cardBody {
+  padding: var(--space-3) var(--space-4);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.brandName {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-white);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.renameRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.renameInput {
+  flex: 1;
+  min-width: 0;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  padding: 3px 8px;
+  color: var(--color-white);
+  font-size: 0.8125rem;
+  font-family: var(--font-body-en);
+  outline: none;
+}
+
+.cardMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.colorSwatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.cardDate {
+  font-size: 0.6875rem;
+  color: var(--color-grey-600);
+}
+
+/* ── Card footer ── */
+.cardFooter {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.useBtn {
+  flex: 1;
+  background: var(--color-primary);
+  border: none;
+  color: var(--color-bg);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  white-space: nowrap;
+}
+
+.useBtn:hover {
+  background: var(--color-accent);
+  box-shadow: 0 2px 8px var(--color-primary-glow);
+}
+
+/* ── Icon buttons ── */
+.iconBtn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-grey-400);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.iconBtn:hover:not(:disabled) {
+  border-color: var(--color-grey-400);
+  color: var(--color-white);
+}
+
+.iconBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.iconBtnMuted {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-grey-600);
+  cursor: pointer;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+  flex-shrink: 0;
+  opacity: 0;
+}
+
+.nameRow:hover .iconBtnMuted {
+  opacity: 1;
+}
+
+.iconBtnMuted:hover {
+  color: var(--color-grey-400);
+  border-color: var(--color-border);
+}
+
+.iconBtnDanger {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-grey-400);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.iconBtnDanger:hover {
+  border-color: #f87171;
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.1);
+}
+
+/* ── Delete confirm inline ── */
+.deleteConfirm {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+}
+
+.deleteQuestion {
+  font-size: 0.6875rem;
+  color: #f87171;
+  font-weight: 600;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.deleteBtnYes {
+  padding: 3px 10px;
+  background: #f87171;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+}
+
+.deleteBtnYes:hover:not(:disabled) {
+  background: #ef4444;
+}
+
+.deleteBtnYes:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ── Empty / loading / error states ── */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  min-height: 220px;
+  color: var(--color-grey-400);
+  text-align: center;
+  font-size: 0.9375rem;
+}
+
+.emptyHint {
+  font-size: 0.8125rem;
+  color: var(--color-grey-600);
+  max-width: 260px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.errorState {
+  color: #f87171;
+  font-size: 0.875rem;
+  padding: var(--space-4);
+  text-align: center;
+}

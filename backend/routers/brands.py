@@ -1,9 +1,13 @@
 """
-Imprnt AI — Phase 2: Brands Router
+Imprnt AI — Brands Router
+GET  /api/brands
 POST /api/brands/upload
 POST /api/brands/manual
 POST /api/brands/load-demo
 GET  /api/brands/{brand_id}
+DELETE /api/brands/{brand_id}
+PATCH  /api/brands/{brand_id}
+POST /api/brands/{brand_id}/product
 """
 import json
 import uuid
@@ -18,7 +22,11 @@ from models.brand import BrandUploadResponse, Brand
 from services.gemini import extract_brand
 from services.colorthief_service import extract_colors
 from services.removebg import remove_background
-from services.supabase_client import upload_file_to_storage, save_brand, get_brand, supabase, get_supabase, _load_demo_brand, _MOCK_DATA_DIR
+from services.supabase_client import (
+    upload_file_to_storage, save_brand, get_brand, supabase, get_supabase,
+    _load_demo_brand, _MOCK_DATA_DIR,
+    list_brands as _list_brands, delete_brand as _delete_brand, rename_brand as _rename_brand,
+)
 
 _DEMO_EID_PROMPT = (
     "Design an Eid Special Edition Launch campaign. Position Volt BD as the energy drink "
@@ -29,6 +37,35 @@ _DEMO_EID_PROMPT = (
 )
 
 router = APIRouter(tags=["Brands"])
+
+
+@router.get("/brands")
+async def list_brands_endpoint():
+    """Lists all saved brands (id, brand_name, logo_url, colors, created_at), newest first."""
+    return _list_brands()
+
+
+class RenameBrandRequest(BaseModel):
+    brand_name: str
+
+
+@router.delete("/brands/{brand_id}")
+async def delete_brand_endpoint(brand_id: str = Path(...)):
+    """Permanently removes a saved brand."""
+    ok = _delete_brand(brand_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Brand not found")
+    return {"deleted": True}
+
+
+@router.patch("/brands/{brand_id}")
+async def rename_brand_endpoint(brand_id: str = Path(...), body: RenameBrandRequest = ...):
+    """Renames a saved brand."""
+    updated = _rename_brand(brand_id, body.brand_name)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Brand not found")
+    return {"id": brand_id, "brand_name": body.brand_name}
+
 
 @router.post("/brands/upload", response_model=BrandUploadResponse)
 async def upload_brand_files(

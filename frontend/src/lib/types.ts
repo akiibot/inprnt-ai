@@ -172,6 +172,16 @@ export interface HealthResponse {
   environment: string;
 }
 
+// ── Brand Library ─────────────────────────────────────────────
+
+export interface BrandSummary {
+  id: string;
+  brand_name: string;
+  logo_url: string | null;
+  colors: BrandColors;
+  created_at: string;
+}
+
 // ── Manual Brand Creation ────────────────────────────────────
 
 export interface ManualBrandPayload {

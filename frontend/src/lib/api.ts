@@ -7,6 +7,7 @@
 import type {
   HealthResponse,
   Brand,
+  BrandSummary,
   Blueprint,
   AdherenceLevel,
   CampaignPlanRequest,
@@ -108,6 +109,24 @@ export async function uploadProductImage(
 
 export async function getBrand(brandId: string): Promise<Brand> {
   return request<Brand>(`/brands/${brandId}`);
+}
+
+export async function listBrands(): Promise<BrandSummary[]> {
+  return request<BrandSummary[]>("/brands");
+}
+
+export async function deleteBrand(brandId: string): Promise<{ deleted: boolean }> {
+  return request<{ deleted: boolean }>(`/brands/${brandId}`, { method: "DELETE" });
+}
+
+export async function renameBrand(
+  brandId: string,
+  brandName: string,
+): Promise<{ id: string; brand_name: string }> {
+  return request(`/brands/${brandId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ brand_name: brandName }),
+  });
 }
 
 export async function loadDemoBrand(): Promise<{ brand_id: string; brand: Brand; prompt: string }> {

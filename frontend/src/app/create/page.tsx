@@ -6,10 +6,11 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   UploadCloud, Check, ChevronRight, Loader2,
-  Play, Download, Zap, ArrowLeft,
+  Play, Download, Zap, ArrowLeft, BookMarked,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import styles from "./create.module.css";
+import { BrandLibrary } from "./BrandLibrary";
 import {
   uploadBrand, uploadProductImage, planCampaign,
   generateCampaign, exportCampaignFormats,
@@ -79,6 +80,8 @@ function CreateCampaignInner() {
   const urlBrandId = searchParams.get("brand_id");
 
   const [currentStep, setCurrentStep] = useState<Step>(urlBrandId ? "PROMPT" : "UPLOAD_BRAND");
+  const [brandInputMode, setBrandInputMode] = useState<"upload" | "manual" | "library">("upload");
+  const [libraryBrandId, setLibraryBrandId] = useState<string | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [demoBrandId, setDemoBrandId] = useState<string | null>(null);
@@ -144,6 +147,7 @@ function CreateCampaignInner() {
 
   const handleNext = () => {
     if (currentStep === "UPLOAD_BRAND") {
+      if (brandInputMode === "upload" && (!brandPdf || !brandLogo)) return;
       setCurrentStep("UPLOAD_PRODUCT");
     } else if (currentStep === "UPLOAD_PRODUCT") {
       setCurrentStep("PROMPT");
@@ -186,7 +190,8 @@ function CreateCampaignInner() {
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
-    if (!urlBrandId && (!brandPdf || !brandLogo)) return;
+    const effectiveBrandId = urlBrandId || libraryBrandId;
+    if (!effectiveBrandId && (!brandPdf || !brandLogo)) return;
 
     setCurrentStep("GENERATING");
     setIsProcessing(true);
@@ -195,15 +200,17 @@ function CreateCampaignInner() {
     setLastBlueprint(null);
 
     try {
-      let brandId = urlBrandId;
+      let brandId = effectiveBrandId;
 
       if (!brandId) {
         addLog("Phase 1/5: Uploading brand guidelines and logo...");
         const brandRes = await uploadBrand(brandPdf!, brandLogo!);
         brandId = brandRes.brand_id;
         addLog(`✅ Brand extracted via Gemini: ${brandRes.brand.brand_name}`);
-      } else {
+      } else if (urlBrandId) {
         addLog("Phase 1/5: Using manually created brand profile...");
+      } else {
+        addLog("Phase 1/5: Loading saved brand from library...");
       }
 
       if (productImage) {
@@ -254,6 +261,7 @@ function CreateCampaignInner() {
     setResults([]);
     setLogs([]);
     setCampaignId(null);
+    setLibraryBrandId(null);
     if (isDemo) {
       setCurrentStep("PROMPT");
     } else {
@@ -264,6 +272,7 @@ function CreateCampaignInner() {
       setPrompt("");
       setDemoBrandId(null);
       setLastBlueprint(null);
+      setBrandInputMode("upload");
     }
   };
 
@@ -334,11 +343,33 @@ function CreateCampaignInner() {
           {currentStep === "UPLOAD_BRAND" && (
             <div>
               <h2 className={styles.cardTitle}>1. Brand Identity</h2>
-              
-              <div className={styles.formRow}>
-                {/* Upload Option */}
+
+              {/* Mode tabs */}
+              <div className={styles.brandOptionTabs}>
+                <button
+                  className={`${styles.brandOptionTab} ${brandInputMode === "upload" ? styles.brandOptionTabActive : ""}`}
+                  onClick={() => setBrandInputMode("upload")}
+                >
+                  Upload PDF
+                </button>
+                <button
+                  className={`${styles.brandOptionTab} ${brandInputMode === "manual" ? styles.brandOptionTabActive : ""}`}
+                  onClick={() => setBrandInputMode("manual")}
+                >
+                  Build Manually
+                </button>
+                <button
+                  className={`${styles.brandOptionTab} ${brandInputMode === "library" ? styles.brandOptionTabActive : ""}`}
+                  onClick={() => setBrandInputMode("library")}
+                >
+                  <BookMarked size={14} style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} />
+                  My Brands
+                </button>
+              </div>
+
+              {/* Upload PDF */}
+              {brandInputMode === "upload" && (
                 <div>
-                  <h3 className={styles.label} style={{ marginBottom: "var(--space-3)" }}>Option A: Upload Guidelines</h3>
                   <UploadZone
                     label="Brand Guidelines (PDF)"
                     file={brandPdf}
@@ -365,36 +396,30 @@ function CreateCampaignInner() {
                     </button>
                   </div>
                 </div>
+              )}
 
-                {/* Manual Option */}
-                <div>
-                  <h3 className={styles.label} style={{ marginBottom: "var(--space-3)" }}>Option B: Build Manually</h3>
-                  <Link 
-                    href="/create/manual" 
-                    className={styles.uploadZone} 
-                    style={{ 
-                      display: "flex", 
-                      flexDirection: "column", 
-                      height: "calc(100% - 36px)", 
-                      minHeight: "280px",
-                      textDecoration: "none", 
-                      justifyContent: "center",
-                      alignItems: "center",
-                      gap: "var(--space-4)"
-                    }}
-                  >
-                    <div className={styles.uploadIcon} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <Zap size={32} />
-                    </div>
-                    <div style={{ textAlign: "center" }}>
-                      <p style={{ color: "var(--color-white)", fontWeight: 600, fontSize: "1.1rem", marginBottom: "var(--space-2)" }}>Build Manually</p>
-                      <p style={{ color: "var(--color-grey-400)", fontSize: "0.9rem", maxWidth: "220px", margin: "0 auto", lineHeight: 1.5 }}>
-                        No PDF? No problem. Define your brand profile step by step.
-                      </p>
-                    </div>
+              {/* Build Manually */}
+              {brandInputMode === "manual" && (
+                <div className={styles.manualPanel}>
+                  <div className={styles.uploadIcon} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Zap size={36} />
+                  </div>
+                  <p>No PDF? No problem. Define your brand identity step by step.</p>
+                  <Link href="/create/manual" className={`${styles.button} ${styles.buttonPrimary}`}>
+                    Open Manual Setup <ChevronRight size={16} />
                   </Link>
                 </div>
-              </div>
+              )}
+
+              {/* My Brands library */}
+              {brandInputMode === "library" && (
+                <BrandLibrary
+                  onSelect={(id) => {
+                    setLibraryBrandId(id);
+                    setCurrentStep("UPLOAD_PRODUCT");
+                  }}
+                />
+              )}
             </div>
           )}
 

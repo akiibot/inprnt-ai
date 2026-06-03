@@ -606,6 +606,53 @@
   }
 }
 
+/* ── Brand input mode tabs ── */
+.brandOptionTabs {
+  display: flex;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  width: fit-content;
+  margin-bottom: var(--space-6);
+}
+
+.brandOptionTab {
+  padding: var(--space-2) var(--space-5);
+  background: transparent;
+  border: none;
+  color: var(--color-grey-400);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: var(--transition-fast);
+  white-space: nowrap;
+}
+
+.brandOptionTab:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-white);
+}
+
+.brandOptionTabActive {
+  background: var(--color-primary);
+  color: var(--color-bg);
+  font-weight: 600;
+}
+
+/* ── Manual redirect panel ── */
+.manualPanel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-5);
+  min-height: 260px;
+  text-align: center;
+  color: var(--color-grey-400);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
 /* ════════════════════════════════════════════════════════════════
    Manual Brand Wizard — /create/manual
    All new classes; nothing above is modified.

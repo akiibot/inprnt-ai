@@ -67,3 +67,34 @@ def get_brand(brand_id: str) -> dict:
     client = get_supabase()
     response = client.table("brands").select("*").eq("id", brand_id).execute()
     return response.data[0] if response.data else None
+
+
+def list_brands() -> list[dict]:
+    """Returns id, brand_name, logo_url, colors, created_at for all brands, newest first."""
+    client = get_supabase()
+    response = (
+        client.table("brands")
+        .select("id, brand_name, logo_url, colors, created_at")
+        .order("created_at", desc=True)
+        .execute()
+    )
+    return response.data or []
+
+
+def delete_brand(brand_id: str) -> bool:
+    """Deletes a brand record. Returns True if a row was deleted."""
+    client = get_supabase()
+    response = client.table("brands").delete().eq("id", brand_id).execute()
+    return bool(response.data)
+
+
+def rename_brand(brand_id: str, brand_name: str) -> dict | None:
+    """Updates brand_name for a brand. Returns the updated row or None."""
+    client = get_supabase()
+    response = (
+        client.table("brands")
+        .update({"brand_name": brand_name})
+        .eq("id", brand_id)
+        .execute()
+    )
+    return response.data[0] if response.data else None
