@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Download, ArrowLeft } from "lucide-react";
+import { Download, ArrowLeft, Video, Loader2, Play, Check } from "lucide-react";
 import styles from "./page.module.css";
+import { planCampaignVideo, generateCampaignVideo } from "@/lib/api";
+import type { VideoPlan } from "@/lib/types";
 
 interface CampaignData {
   id: string;
@@ -26,12 +28,22 @@ interface CampaignData {
   };
 }
 
+type VideoStep = "idle" | "planning" | "rendering" | "done" | "error";
+
 const API_BASE = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api`;
 
 export default function CampaignPage({ params }: { params: { id: string } }) {
   const [campaign, setCampaign] = useState<CampaignData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Video state
+  const [videoStep, setVideoStep] = useState<VideoStep>("idle");
+  const [videoPlan, setVideoPlan] = useState<VideoPlan | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const [videoElapsed, setVideoElapsed] = useState<number | null>(null);
+  const [videoTimer, setVideoTimer] = useState(0);
 
   useEffect(() => {
     fetch(`${API_BASE}/campaigns/${params.id}`)
@@ -44,11 +56,42 @@ export default function CampaignPage({ params }: { params: { id: string } }) {
       .finally(() => setLoading(false));
   }, [params.id]);
 
+  // Elapsed timer while rendering
+  useEffect(() => {
+    if (videoStep !== "rendering") { setVideoTimer(0); return; }
+    const t = setInterval(() => setVideoTimer((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [videoStep]);
+
+  const handleGenerateVideo = async () => {
+    if (!campaign) return;
+    setVideoError(null);
+    setVideoUrl(null);
+    setVideoPlan(null);
+
+    try {
+      // Step 1 — plan
+      setVideoStep("planning");
+      const { video_plan } = await planCampaignVideo(campaign.id, "1:1");
+      setVideoPlan(video_plan);
+
+      // Step 2 — render
+      setVideoStep("rendering");
+      const result = await generateCampaignVideo(campaign.id, video_plan, "1:1");
+      setVideoUrl(result.video_url);
+      setVideoElapsed(result.generation_time_seconds);
+      setVideoStep("done");
+    } catch (e: unknown) {
+      setVideoError(e instanceof Error ? e.message : String(e));
+      setVideoStep("error");
+    }
+  };
+
   const posters = campaign
     ? [
-        { label: "Instagram Post", ar: "1:1", url: campaign.poster_1x1_url, cls: styles.posterImage1x1 },
+        { label: "Instagram Post",  ar: "1:1",  url: campaign.poster_1x1_url,  cls: styles.posterImage1x1 },
         { label: "Instagram Story", ar: "9:16", url: campaign.poster_9x16_url, cls: styles.posterImage9x16 },
-        { label: "Facebook Cover", ar: "16:9", url: campaign.poster_16x9_url, cls: styles.posterImage16x9 },
+        { label: "Facebook Cover",  ar: "16:9", url: campaign.poster_16x9_url, cls: styles.posterImage16x9 },
       ].filter((p) => p.url)
     : [];
 
@@ -138,6 +181,86 @@ export default function CampaignPage({ params }: { params: { id: string } }) {
                 </div>
               </section>
             )}
+
+            {/* ── Video Generator ── */}
+            <section className={styles.section}>
+              <h2 className={styles.sectionTitle}>Video</h2>
+
+              {videoStep === "idle" && (
+                <div className={styles.videoIdleCard}>
+                  <div className={styles.videoIdleIcon}>
+                    <Video size={32} strokeWidth={1.5} />
+                  </div>
+                  <p className={styles.videoIdleText}>
+                    Generate an animated MP4 video from this campaign's poster and blueprint.
+                    Powered by HyperFrames + GSAP.
+                  </p>
+                  <button className={styles.videoGenBtn} onClick={handleGenerateVideo}>
+                    <Play size={16} />
+                    Generate Video
+                  </button>
+                </div>
+              )}
+
+              {(videoStep === "planning" || videoStep === "rendering") && (
+                <div className={styles.videoProgressCard}>
+                  <Loader2 size={28} className="animate-spin" style={{ color: "var(--color-primary)" }} />
+                  <div className={styles.videoProgressText}>
+                    {videoStep === "planning"
+                      ? "AI Video Director planning animations…"
+                      : `HyperFrames rendering video… ${videoTimer}s`}
+                  </div>
+                  {videoStep === "rendering" && (
+                    <p className={styles.videoProgressHint}>
+                      Frame-by-frame capture + FFmpeg encode — takes 60–120s
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {videoStep === "done" && videoUrl && (
+                <div className={styles.videoResultCard}>
+                  <div className={styles.videoResultHeader}>
+                    <span className={styles.videoResultBadge}>
+                      <Check size={13} /> Done in {videoElapsed?.toFixed(1)}s
+                    </span>
+                    <a
+                      href={videoUrl}
+                      download
+                      target="_blank"
+                      rel="noreferrer"
+                      className={styles.videoDownloadBtn}
+                    >
+                      <Download size={14} /> Download MP4
+                    </a>
+                  </div>
+                  <video
+                    className={styles.videoPlayer}
+                    src={videoUrl}
+                    controls
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                  />
+                  <button
+                    className={styles.videoRegenBtn}
+                    onClick={handleGenerateVideo}
+                  >
+                    Regenerate
+                  </button>
+                </div>
+              )}
+
+              {videoStep === "error" && (
+                <div className={styles.videoErrorCard}>
+                  <p className={styles.videoErrorText}>Video generation failed: {videoError}</p>
+                  <button className={styles.videoGenBtn} onClick={handleGenerateVideo}>
+                    Try Again
+                  </button>
+                </div>
+              )}
+            </section>
           </>
         )}
       </div>

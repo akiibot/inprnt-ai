@@ -172,6 +172,32 @@ export interface HealthResponse {
   environment: string;
 }
 
+// ── Video ─────────────────────────────────────────────────────
+
+export interface AnimationEntry {
+  layer_id: string;
+  gsap_from: Record<string, unknown>;
+  gsap_to: Record<string, unknown>;
+  start_sec: number;
+}
+
+export interface VideoPlan {
+  duration_sec: number;
+  fps: number;
+  canvas: { width: number; height: number };
+  animations: AnimationEntry[];
+}
+
+export interface VideoPlanResponse {
+  video_plan: VideoPlan;
+}
+
+export interface VideoGenerateResponse {
+  video_id: string;
+  video_url: string;
+  generation_time_seconds: number;
+}
+
 // ── Brand Library ─────────────────────────────────────────────
 
 export interface BrandSummary {

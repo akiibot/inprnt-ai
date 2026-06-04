@@ -3,6 +3,8 @@ Imprnt AI — Campaigns Router
 POST /api/campaigns/plan
 POST /api/campaigns/generate
 POST /api/campaigns/generate-all
+POST /api/campaigns/{id}/plan-video
+POST /api/campaigns/{id}/generate-video
 """
 import asyncio
 import json
@@ -23,7 +25,10 @@ from models.blueprint import (
     CampaignPlanRequest,
     CampaignPlanResponse,
 )
+from models.video import VideoPlan, VideoGenerateResponse
 from services.gemini import plan_campaign
+from services.video_planner import plan_video
+from services.video_generator import render_and_upload_video
 from services.supabase_client import get_brand, get_supabase, upload_file_to_storage
 from services.flux import generate_background
 from compositor.template import build_html
@@ -394,3 +399,117 @@ async def get_campaign_endpoint(campaign_id: str):
     if not res.data:
         raise HTTPException(status_code=404, detail="Campaign not found")
     return res.data[0]
+
+
+# ── Video endpoints ───────────────────────────────────────────────────────────
+
+class PlanVideoRequest(BaseModel):
+    adherence_level: Literal["strict", "moderate", "creative"] = "moderate"
+    aspect_ratio: Literal["1:1", "9:16", "16:9"] = "1:1"
+
+
+class GenerateVideoRequest(BaseModel):
+    video_plan: dict
+    aspect_ratio: Literal["1:1", "9:16", "16:9"] = "1:1"
+
+
+@router.post("/campaigns/{campaign_id}/plan-video")
+async def plan_video_endpoint(campaign_id: str, body: PlanVideoRequest):
+    """
+    Reads the stored campaign blueprint and asks Gemini to choreograph
+    GSAP entrance animations for every layer. Returns video_plan.json.
+    """
+    db = get_supabase()
+    row = db.table("campaigns").select("*").eq("id", campaign_id).execute()
+    if not row.data:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    campaign = row.data[0]
+    blueprint = campaign.get("blueprint")
+    if not blueprint:
+        raise HTTPException(status_code=400, detail="Campaign has no stored blueprint")
+
+    brand_id = campaign.get("brand_id")
+    brand_data = get_brand(brand_id)
+    if not brand_data:
+        raise HTTPException(status_code=404, detail=f"Brand {brand_id} not found")
+
+    try:
+        loop = asyncio.get_running_loop()
+        video_plan: VideoPlan = await loop.run_in_executor(
+            None,
+            lambda: plan_video(
+                brand=_brand_profile(brand_data),
+                blueprint=blueprint,
+                aspect_ratio=body.aspect_ratio,
+            ),
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Video planning failed: {e}")
+
+    return {"video_plan": video_plan.model_dump()}
+
+
+@router.post("/campaigns/{campaign_id}/generate-video", response_model=VideoGenerateResponse)
+async def generate_video_endpoint(campaign_id: str, body: GenerateVideoRequest):
+    """
+    Renders a HyperFrames MP4 video from the given video_plan, uploads it to
+    Supabase, and saves a row to the videos table.
+    """
+    db = get_supabase()
+    row = db.table("campaigns").select("*").eq("id", campaign_id).execute()
+    if not row.data:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    campaign = row.data[0]
+    blueprint = campaign.get("blueprint")
+    if not blueprint:
+        raise HTTPException(status_code=400, detail="Campaign has no stored blueprint")
+
+    # Pick the blueprint matching the requested aspect ratio, or fall back to stored one
+    ar = body.aspect_ratio
+    blueprint["format"] = blueprint.get("format", {})
+
+    brand_id = campaign.get("brand_id")
+    brand_data = get_brand(brand_id)
+    if not brand_data:
+        raise HTTPException(status_code=404, detail=f"Brand {brand_id} not found")
+
+    # Reuse the already-generated Flux background — no regeneration needed
+    assets = {
+        "logo_url": brand_data.get("logo_url"),
+        "product_image_url": brand_data.get("product_image_url"),
+        "background_url": campaign.get("background_url"),
+    }
+
+    try:
+        video_url, elapsed = await render_and_upload_video(
+            campaign_id=campaign_id,
+            blueprint=blueprint,
+            brand=brand_data,
+            assets=assets,
+            video_plan=body.video_plan,
+        )
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Video render failed: {e}")
+
+    # Persist to videos table (best-effort — don't fail the response if table missing)
+    video_id = str(uuid.uuid4())
+    try:
+        db.table("videos").insert({
+            "id": video_id,
+            "campaign_id": campaign_id,
+            "video_plan": body.video_plan,
+            "video_url": video_url,
+            "duration_sec": body.video_plan.get("duration_sec", 6.0),
+            "aspect_ratio": ar,
+        }).execute()
+    except Exception as e:
+        print(f"Warning: failed to save video row: {e}")
+
+    return VideoGenerateResponse(
+        video_id=video_id,
+        video_url=video_url,
+        generation_time_seconds=round(elapsed, 2),
+    )

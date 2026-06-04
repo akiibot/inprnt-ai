@@ -17,6 +17,9 @@ import type {
   ExportCampaignResponse,
   AspectRatio,
   ManualBrandPayload,
+  VideoPlan,
+  VideoPlanResponse,
+  VideoGenerateResponse,
 } from "./types";
 
 const API_BASE = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api`;
@@ -193,6 +196,29 @@ export async function generateAllFormats(data: {
   return request<GenerateAllResponse>("/campaigns/generate-all", {
     method: "POST",
     body: JSON.stringify(data),
+  });
+}
+
+// ── Video ─────────────────────────────────────────────────────
+
+export async function planCampaignVideo(
+  campaignId: string,
+  aspectRatio: AspectRatio = "1:1",
+): Promise<VideoPlanResponse> {
+  return request<VideoPlanResponse>(`/campaigns/${campaignId}/plan-video`, {
+    method: "POST",
+    body: JSON.stringify({ aspect_ratio: aspectRatio }),
+  });
+}
+
+export async function generateCampaignVideo(
+  campaignId: string,
+  videoPlan: VideoPlan,
+  aspectRatio: AspectRatio = "1:1",
+): Promise<VideoGenerateResponse> {
+  return request<VideoGenerateResponse>(`/campaigns/${campaignId}/generate-video`, {
+    method: "POST",
+    body: JSON.stringify({ video_plan: videoPlan, aspect_ratio: aspectRatio }),
   });
 }
 

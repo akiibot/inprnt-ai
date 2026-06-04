@@ -612,9 +612,19 @@ function CreateCampaignInner() {
 
               <div className={styles.actions} style={{ marginTop: "var(--space-10)" }}>
                 {campaignId && (
-                  <Link href={`/campaign/${campaignId}`} className={styles.button}>
-                    View Details
-                  </Link>
+                  <>
+                    <Link href={`/campaign/${campaignId}`} className={styles.button}>
+                      View Details
+                    </Link>
+                    <Link
+                      href={`/campaign/${campaignId}#video`}
+                      className={styles.button}
+                      style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-2)" }}
+                    >
+                      <Play size={16} />
+                      Generate Video
+                    </Link>
+                  </>
                 )}
                 <button className={`${styles.button} ${styles.buttonPrimary}`} onClick={handleStartNew}>
                   {isDemo ? "Generate Again" : "Start New Campaign"}

@@ -54,6 +54,12 @@ def _is_rate_limited(exc: Exception) -> bool:
     return "429" in str(exc) or "RESOURCE_EXHAUSTED" in str(exc)
 
 
+def _is_daily_quota_exhausted(exc: Exception) -> bool:
+    """True if this is a per-day quota limit (retrying won't help until tomorrow)."""
+    s = str(exc)
+    return "PerDay" in s or "per_day" in s or "FreeTier" in s
+
+
 def _blueprint_has_bengali(blueprint_dict: dict) -> bool:
     """True if any text layer contains Bengali-script characters (U+0980–U+09FF)."""
     for layer in blueprint_dict.get("layers", []):
@@ -96,6 +102,11 @@ def _call_gemini_with_fallback(system_instruction: str, contents: list, thinking
         return response.text, PRIMARY_MODEL
     except Exception as e:
         if _is_rate_limited(e):
+            if _is_daily_quota_exhausted(e):
+                raise Exception(
+                    "Gemini daily quota exhausted (free tier: 20 req/day). "
+                    "Enable billing on your Google AI Studio project to continue."
+                )
             # Don't try the fallback — quota is per-project, not per-model slug.
             # Let the retry loop handle sleep + backoff.
             raise
@@ -213,6 +224,11 @@ def plan_campaign(brand: dict, prompt: str, format_spec: dict, adherence_level: 
             last_error = f"Content requirement not met: {e}"
         except Exception as e:
             if _is_rate_limited(e):
+                if _is_daily_quota_exhausted(e):
+                    raise Exception(
+                        "Gemini daily quota exhausted (free tier: 20 req/day for gemini-2.5-flash). "
+                        "Enable billing on your Google AI Studio project to continue, or wait until tomorrow."
+                    )
                 delay = _parse_retry_delay(e)
                 print(f"Campaign planning rate-limited (429). Waiting {delay:.0f}s before retry {retries + 1}...")
                 time.sleep(delay)
