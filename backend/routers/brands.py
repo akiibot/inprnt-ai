@@ -314,33 +314,35 @@ async def upload_product_image(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to read image: {e}")
         
-    # 2. Strip Background
+    # 2. Strip Background (best-effort — fall back to original if credits exhausted)
+    bg_removed = False
     try:
         transparent_bytes = remove_background(image_bytes, product_image.content_type)
+        bg_removed = True
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to remove background: {e}")
-        
+        print(f"Warning: Remove.bg failed ({e}). Uploading original image without background removal.")
+        transparent_bytes = image_bytes
+
     # 3. Upload to Supabase Storage
-    # Save as .png because remove.bg returns PNG format for transparency
     filename = f"{brand_id}/product_transparent.png"
+    content_type = "image/png" if bg_removed else (product_image.content_type or "image/png")
     try:
-        url_info = upload_file_to_storage("assets", filename, transparent_bytes, "image/png")
+        url_info = upload_file_to_storage("assets", filename, transparent_bytes, content_type)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to upload to storage: {e}")
-        
+
     # 4. Update Brand Record in Database
     try:
         client = get_supabase()
-        # Update product_image_url in the brands table
         res = client.table("brands").update({"product_image_url": url_info}).eq("id", brand_id).execute()
-        
         if not res.data:
             raise Exception("No record updated")
     except Exception as e:
-         raise HTTPException(status_code=500, detail=f"Database update failed: {e}")
-         
+        raise HTTPException(status_code=500, detail=f"Database update failed: {e}")
+
     return {
-        "message": "Product image processed and background removed successfully",
-        "product_image_url": url_info
+        "message": "Product image uploaded" + (" with background removed" if bg_removed else " (background removal skipped — no credits)"),
+        "product_image_url": url_info,
+        "background_removed": bg_removed,
     }
 

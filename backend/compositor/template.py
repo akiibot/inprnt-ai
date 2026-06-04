@@ -31,14 +31,26 @@ _FONTS_DIR = Path(__file__).parent.parent / "fonts"
 
 # Maps (font-family, weight) → filename in _FONTS_DIR
 _FONT_FILES: list[tuple[str, str, str]] = [
-    ("Anton",             "400", "Anton-Regular.woff2"),
-    ("Inter",             "400", "Inter-Regular.woff2"),
-    ("Inter",             "500", "Inter-Medium.woff2"),
-    ("Inter",             "600", "Inter-SemiBold.woff2"),
-    ("Inter",             "700", "Inter-Bold.woff2"),
+    # Latin — display
+    ("Anton",        "400", "Anton-Regular.woff2"),
+    ("Bebas Neue",   "400", "BebasNeue-Regular.woff2"),
+    ("Oswald",       "600", "Oswald-SemiBold.woff2"),
+    ("Oswald",       "700", "Oswald-Bold.woff2"),
+    # Latin — humanist / grotesque
+    ("Montserrat",   "400", "Montserrat-Regular.woff2"),
+    ("Montserrat",   "700", "Montserrat-Bold.woff2"),
+    ("Poppins",      "500", "Poppins-Medium.woff2"),
+    ("Poppins",      "700", "Poppins-Bold.woff2"),
+    # Latin — UI / body
+    ("Inter",        "400", "Inter-Regular.woff2"),
+    ("Inter",        "500", "Inter-Medium.woff2"),
+    ("Inter",        "600", "Inter-SemiBold.woff2"),
+    ("Inter",        "700", "Inter-Bold.woff2"),
+    # Bengali — display
     ("Hind Siliguri",     "400", "HindSiliguri-Regular.woff2"),
     ("Hind Siliguri",     "600", "HindSiliguri-SemiBold.woff2"),
     ("Hind Siliguri",     "700", "HindSiliguri-Bold.woff2"),
+    # Bengali — body
     ("Noto Sans Bengali", "400", "NotoSansBengali-Regular.woff2"),
     ("Noto Sans Bengali", "500", "NotoSansBengali-Medium.woff2"),
     ("Noto Sans Bengali", "600", "NotoSansBengali-SemiBold.woff2"),
@@ -48,18 +60,41 @@ _FONT_FILES: list[tuple[str, str, str]] = [
 _GOOGLE_FONTS_IMPORT = (
     "@import url('https://fonts.googleapis.com/css2?"
     "family=Anton"
-    "&family=Hind+Siliguri:wght@400;600;700"
+    "&family=Bebas+Neue"
+    "&family=Oswald:wght@600;700"
+    "&family=Montserrat:wght@400;700"
+    "&family=Poppins:wght@500;700"
     "&family=Inter:wght@400;500;600;700"
+    "&family=Hind+Siliguri:wght@400;600;700"
     "&family=Noto+Sans+Bengali:wght@400;500;600;700"
     "&display=swap');"
 )
 
 
-# Only these 4 families are embedded. Any other font Gemini picks (Bebas Neue,
-# DM Sans, Oswald, etc.) must be snapped to one of these or it renders as the
-# browser default sans-serif (no @import — we're offline).
-_EMBEDDED_LATIN = {"Anton", "Inter"}
+# Embedded Latin families — any other font Gemini picks must be snapped to one
+# of these or it renders as the browser default sans-serif (no @import offline).
+_EMBEDDED_LATIN = {"Anton", "Bebas Neue", "Oswald", "Montserrat", "Poppins", "Inter"}
 _EMBEDDED_BENGALI = {"Hind Siliguri", "Noto Sans Bengali"}
+
+# Fallback map for non-embedded Latin fonts (closest aesthetic match)
+_LATIN_SNAP: dict[str, str] = {
+    # Condensed / tall display
+    "Bebas Neue Pro": "Bebas Neue",
+    "Barlow Condensed": "Oswald",
+    "Fjalla One": "Oswald",
+    # Geometric sans
+    "Montserrat Alternates": "Montserrat",
+    "Nunito": "Poppins",
+    "Raleway": "Montserrat",
+    "DM Sans": "Inter",
+    "Plus Jakarta Sans": "Inter",
+    # Slab / other
+    "Roboto Condensed": "Oswald",
+    "Roboto": "Inter",
+    "Open Sans": "Inter",
+    "Lato": "Inter",
+    "Source Sans Pro": "Inter",
+}
 
 
 def _has_bengali(text: str) -> bool:
@@ -71,7 +106,8 @@ def _snap_font_family(font_family: str, font_size: int, content: str) -> str:
     """
     Map any requested font onto an embedded family so it always renders.
     - Bengali content → Hind Siliguri (display) or Noto Sans Bengali (body)
-    - Latin content   → Anton (display, size >= 44) or Inter (body)
+    - Latin content   → pass through if embedded; lookup snap map; else
+                        Bebas Neue (display ≥44px) or Montserrat (body)
     Already-embedded families pass through unchanged.
     """
     if _has_bengali(content):
@@ -80,7 +116,10 @@ def _snap_font_family(font_family: str, font_size: int, content: str) -> str:
         return "Hind Siliguri" if font_size >= 44 else "Noto Sans Bengali"
     if font_family in _EMBEDDED_LATIN:
         return font_family
-    return "Anton" if font_size >= 44 else "Inter"
+    if font_family in _LATIN_SNAP:
+        return _LATIN_SNAP[font_family]
+    # Unknown font — pick best embedded match by size
+    return "Bebas Neue" if font_size >= 44 else "Montserrat"
 
 
 def _build_fonts_css() -> str:
@@ -192,29 +231,53 @@ def _render_overlay(layer: dict) -> str:
     )
 
 
+def _text_luminance(hex_color: str) -> float:
+    """
+    Return perceptual relative luminance (0–1) for a hex color.
+    Uses the sRGB linearisation from WCAG 2.1.
+    """
+    r, g, b = _hex_to_rgb(hex_color)
+    def lin(c: int) -> float:
+        s = c / 255.0
+        return s / 12.92 if s <= 0.04045 else ((s + 0.055) / 1.055) ** 2.4
+    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
+
+
+def _auto_text_align(position: str) -> str:
+    """Derive a sensible text-align from the 9-point position keyword."""
+    if "center" in position:
+        return "center"
+    if "right" in position:
+        return "right"
+    return "left"
+
+
 def _render_text(layer: dict) -> str:
     """Render a text layer — either plain text or a CTA button."""
-    content      = layer.get("content", "")
-    font_family  = layer.get("font_family", "Inter")
-    font_size    = layer.get("font_size", 24)
-    font_weight  = layer.get("font_weight", 400)
-    color        = layer.get("color", "#FFFFFF")
-    transform    = layer.get("text_transform", "none")
-    max_width    = layer.get("max_width")
-    line_height  = layer.get("line_height", 1.4)
-    z            = layer.get("z_index", 10)
-    position     = layer.get("position", "top-left")
-    margin       = layer.get("margin", {})
-    bg_color     = layer.get("background_color")
-    border_r     = layer.get("border_radius", 0)
-    padding      = layer.get("padding")
+    content        = layer.get("content", "")
+    font_family    = layer.get("font_family", "Inter")
+    font_size      = layer.get("font_size", 24)
+    font_weight    = layer.get("font_weight", 400)
+    color          = layer.get("color", "#FFFFFF")
+    transform      = layer.get("text_transform", "none")
+    max_width      = layer.get("max_width")
+    line_height    = layer.get("line_height", 1.4)
+    z              = layer.get("z_index", 10)
+    position       = layer.get("position", "top-left")
+    margin         = layer.get("margin", {})
+    bg_color       = layer.get("background_color")
+    border_r       = layer.get("border_radius", 0)
+    padding        = layer.get("padding")
+    letter_spacing = layer.get("letter_spacing")  # float | None, in px
+    # text_align: explicit from blueprint, else auto-derived from position
+    text_align = layer.get("text_align") or _auto_text_align(position)
 
     pos_css = POSITION_CSS.get(position, POSITION_CSS["top-left"])
     margin_css = _margin_css(margin)
     max_w_css = f"max-width:{max_width}px;" if max_width else ""
+    ls_css = f"letter-spacing:{letter_spacing}px;" if letter_spacing is not None else ""
 
-    # Snap to an embedded font (Bebas Neue, DM Sans, etc. → Anton/Inter) so it
-    # never falls back to the browser default. Detect Bengali from the content.
+    # Snap to an embedded font so it never falls back to browser default.
     is_bn = _has_bengali(content)
     font_family = _snap_font_family(font_family, font_size, content)
     lang_attr = 'lang="bn"' if is_bn else 'lang="en"'
@@ -223,26 +286,40 @@ def _render_text(layer: dict) -> str:
     if bg_color:
         pad_css = _padding_css(padding) if padding else "padding:12px 24px;"
         return (
-            f'<div {lang_attr} style="position:absolute; {pos_css} {margin_css} z-index:{z};">'
+            f'<div {lang_attr} style="position:absolute; {pos_css} {margin_css} z-index:{z}; '
+            f'text-align:{text_align};">'
             f'<span style="display:inline-block; font-family:\'{font_family}\', sans-serif; '
             f'font-size:{font_size}px; font-weight:{font_weight}; color:{color}; '
             f'background:{bg_color}; {pad_css} border-radius:{border_r}px; '
-            f'text-transform:{transform}; line-height:{line_height}; white-space:nowrap;">'
+            f'text-transform:{transform}; line-height:{line_height}; {ls_css} '
+            f'white-space:nowrap;">'
             f'{content}</span></div>'
         )
 
-    # Plain text variant. A drop shadow keeps headlines legible over a busy,
-    # high-detail Flux background — larger text gets a deeper shadow.
-    shadow = (
-        "text-shadow: 0 4px 24px rgba(0,0,0,0.65), 0 2px 6px rgba(0,0,0,0.55);"
-        if font_size >= 44
-        else "text-shadow: 0 2px 10px rgba(0,0,0,0.55);"
-    )
+    # Adaptive drop shadow: dark shadow for light text, light shadow for dark text.
+    # This prevents black-on-black when a brand uses dark-colored headlines.
+    lum = _text_luminance(color)
+    if lum > 0.4:
+        # Light text on dark/busy background — deep dark shadow
+        shadow = (
+            "text-shadow: 0 4px 24px rgba(0,0,0,0.70), 0 2px 6px rgba(0,0,0,0.60);"
+            if font_size >= 44
+            else "text-shadow: 0 2px 10px rgba(0,0,0,0.60);"
+        )
+    else:
+        # Dark text — use a soft white halo for legibility over light areas
+        shadow = (
+            "text-shadow: 0 2px 12px rgba(255,255,255,0.80), 0 1px 4px rgba(255,255,255,0.60);"
+            if font_size >= 44
+            else "text-shadow: 0 1px 6px rgba(255,255,255,0.70);"
+        )
+
     return (
         f'<div {lang_attr} style="position:absolute; {pos_css} {margin_css} {max_w_css} z-index:{z}; '
         f'font-family:\'{font_family}\', sans-serif; font-size:{font_size}px; '
         f'font-weight:{font_weight}; color:{color}; text-transform:{transform}; '
-        f'line-height:{line_height}; word-break:keep-all; {shadow}">'
+        f'line-height:{line_height}; text-align:{text_align}; {ls_css} '
+        f'word-break:keep-all; {shadow}">'
         f'{content}</div>'
     )
 

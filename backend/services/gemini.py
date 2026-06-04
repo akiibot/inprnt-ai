@@ -20,12 +20,38 @@ from models.brand import Brand
 from models.blueprint import Blueprint
 
 # Initialize Gemini Client
+# Priority: service account JSON key (Vertex AI) > API key (AI Studio)
 client: Optional[genai.Client] = None
-if settings.GOOGLE_AI_API_KEY:
+if settings.GOOGLE_SERVICE_ACCOUNT_PATH:
+    try:
+        import json as _json
+        from google.oauth2 import service_account as _sa_module
+
+        # Read only the non-secret project_id from the file
+        with open(settings.GOOGLE_SERVICE_ACCOUNT_PATH) as _f:
+            _sa_meta = _json.load(_f)
+        _project_id = _sa_meta.get("project_id", "")
+
+        _creds = _sa_module.Credentials.from_service_account_file(
+            settings.GOOGLE_SERVICE_ACCOUNT_PATH,
+            scopes=["https://www.googleapis.com/auth/cloud-platform"],
+        )
+        # Vertex AI endpoint accepts service account credentials natively
+        client = genai.Client(
+            vertexai=True,
+            project=_project_id,
+            location="us-central1",
+            credentials=_creds,
+        )
+        print(f"Gemini: initialized via Vertex AI (project: {_project_id})")
+    except Exception as e:
+        print(f"Warning: Failed to initialize Gemini client with service account: {e}")
+elif settings.GOOGLE_AI_API_KEY:
     try:
         client = genai.Client(api_key=settings.GOOGLE_AI_API_KEY)
+        print("Gemini: initialized via AI Studio API key.")
     except Exception as e:
-        print(f"Warning: Failed to initialize Gemini client: {e}")
+        print(f"Warning: Failed to initialize Gemini client with API key: {e}")
 
 # gemini-2.5-flash:      confirmed working on this key — supports ThinkingConfig
 # gemini-2.5-flash-lite: confirmed working on this key — lighter fallback
@@ -36,7 +62,11 @@ FALLBACK_MODEL = "gemini-2.5-flash-lite"
 def get_gemini() -> genai.Client:
     """Returns the Gemini client instance."""
     if not client:
-        raise ValueError("Gemini client not initialized. Check GOOGLE_AI_API_KEY in .env")
+        raise ValueError(
+            "Gemini client not initialized. Set either:\n"
+            "  GOOGLE_SERVICE_ACCOUNT_PATH=/path/to/service-account.json  (Vertex AI)\n"
+            "  GOOGLE_AI_API_KEY=AIza...  (AI Studio, from aistudio.google.com/app/apikey)"
+        )
     return client
 
 
@@ -104,8 +134,9 @@ def _call_gemini_with_fallback(system_instruction: str, contents: list, thinking
         if _is_rate_limited(e):
             if _is_daily_quota_exhausted(e):
                 raise Exception(
-                    "Gemini daily quota exhausted (free tier: 20 req/day). "
-                    "Enable billing on your Google AI Studio project to continue."
+                    "Gemini daily quota exhausted. "
+                    "If using Vertex AI (service account): enable billing at console.cloud.google.com. "
+                    "If using AI Studio API key: enable billing at aistudio.google.com."
                 )
             # Don't try the fallback — quota is per-project, not per-model slug.
             # Let the retry loop handle sleep + backoff.
@@ -226,8 +257,9 @@ def plan_campaign(brand: dict, prompt: str, format_spec: dict, adherence_level: 
             if _is_rate_limited(e):
                 if _is_daily_quota_exhausted(e):
                     raise Exception(
-                        "Gemini daily quota exhausted (free tier: 20 req/day for gemini-2.5-flash). "
-                        "Enable billing on your Google AI Studio project to continue, or wait until tomorrow."
+                        "Gemini daily quota exhausted (gemini-2.5-flash). "
+                        "If using Vertex AI (service account): enable billing at console.cloud.google.com. "
+                        "If using AI Studio API key: enable billing at aistudio.google.com, or wait until tomorrow."
                     )
                 delay = _parse_retry_delay(e)
                 print(f"Campaign planning rate-limited (429). Waiting {delay:.0f}s before retry {retries + 1}...")

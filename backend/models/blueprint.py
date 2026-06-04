@@ -57,6 +57,8 @@ class BlueprintLayer(BaseModel):
     font_weight: Optional[int] = None
     color: Optional[str] = None
     text_transform: Optional[Literal["none", "uppercase", "lowercase"]] = "none"
+    text_align: Optional[Literal["left", "center", "right"]] = None
+    letter_spacing: Optional[float] = None  # px, e.g. -2.0 for tight display
 
     # CTA button fields
     background_color: Optional[str] = None

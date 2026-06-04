@@ -62,6 +62,11 @@ CRITICAL RULES:
    - brand.typography.heading_font_bn for Bengali headlines
    - brand.typography.body_font for English body text
    - brand.typography.body_font_bn for Bengali body text
+   Available embedded English fonts (always render correctly, pick these over others):
+   - Display/condensed: "Anton", "Bebas Neue", "Oswald"
+   - Humanist/geometric: "Montserrat", "Poppins"
+   - UI/body: "Inter"
+   Available Bengali fonts: "Hind Siliguri" (display), "Noto Sans Bengali" (body)
 
 5. Colors must come from brand.colors. Do not invent new colors.
 
@@ -138,6 +143,25 @@ CRITICAL RULES:
     d. Keep headline max_width <= format width minus 160 (80px side padding),
        so text never touches the canvas edges.
 
+15. TEXT ALIGNMENT — MANDATORY:
+    Every text layer MUST include a "text_align" field:
+    - Use "center" for any layer with a *-center position (top-center, center,
+      bottom-center). This ensures wrapped lines look intentional, not ragged.
+    - Use "right" for *-right positions.
+    - Use "left" for *-left positions.
+    Omitting text_align causes left-ragged wrapping on centered elements —
+    this is always wrong and will be rejected.
+
+16. LETTER SPACING — for a premium typographic finish:
+    - Large display fonts (Anton, Bebas Neue, Oswald) at headline sizes:
+      use letter_spacing between -2 and -4 (negative = tighter = more premium).
+    - Montserrat/Poppins headlines: use -1 to 0.
+    - All-caps body or CTA text: use 1 to 3 (wider tracking reads better at
+      small sizes in uppercase).
+    - Bengali text: always set letter_spacing to null (Bengali script uses
+      ligatures that break with manual tracking).
+    - Body text at normal case: omit (null).
+
 INPUT YOU WILL RECEIVE:
 - brand_json: The complete brand identity object
 - campaign_prompt: The user's natural language campaign description
@@ -168,6 +192,8 @@ Return ONLY valid JSON. No markdown, no code fences, no explanation.
       "font_weight": number,
       "color": "#hex",
       "text_transform": "none | uppercase | lowercase",
+      "text_align": "left | center | right (mandatory for text layers — see rule 15)",
+      "letter_spacing": number_or_null,
       "background_color": "#hex (CTA buttons only)",
       "padding": { "top": number, "right": number, "bottom": number, "left": number },
       "border_radius": number,
