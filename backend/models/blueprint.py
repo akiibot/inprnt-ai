@@ -22,7 +22,7 @@ class BlueprintFormat(BaseModel):
 
 class BlueprintBackground(BaseModel):
     source: Literal["generated"]
-    prompt: str  # Flux image prompt — must NOT contain text
+    prompt: str  # Imagen 3 image prompt — must NOT contain text
     fallback_color: str = Field(..., pattern=r"^#[0-9A-Fa-f]{6}$")
 
 
@@ -124,3 +124,4 @@ class CampaignGenerateResponse(BaseModel):
     poster_url: str
     background_url: Optional[str] = None
     generation_time_seconds: float
+    captions: Optional[dict] = None

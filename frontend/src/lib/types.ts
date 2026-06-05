@@ -121,6 +121,16 @@ export interface Blueprint {
   metadata: BlueprintMetadata;
 }
 
+// ── Captions ──────────────────────────────────────────────────
+
+export interface CampaignCaptions {
+  instagram: string;
+  facebook: string;
+  tiktok: string;
+  caption_bn: string;
+  hashtags: string[];
+}
+
 // ── API Request / Response shapes ────────────────────────────
 
 export interface CampaignPlanRequest {
@@ -141,6 +151,7 @@ export interface CampaignGenerateResponse {
   poster_url: string;
   background_url?: string;
   generation_time_seconds: number;
+  captions?: CampaignCaptions;
 }
 
 export interface GenerateAllResponse {
@@ -151,6 +162,7 @@ export interface GenerateAllResponse {
     poster_url: string;
   }>;
   total_generation_time_seconds: number;
+  captions?: CampaignCaptions;
 }
 
 export interface ExportResult {

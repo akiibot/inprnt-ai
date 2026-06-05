@@ -11,12 +11,13 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import styles from "./create.module.css";
 import { BrandLibrary } from "./BrandLibrary";
+import { CaptionPanel } from "./CaptionPanel";
 import {
   uploadBrand, uploadProductImage, planCampaign,
   generateCampaign, exportCampaignFormats,
   loadDemoBrand, runDemoGenerate,
 } from "@/lib/api";
-import type { AdherenceLevel, Blueprint, ExportResult } from "@/lib/types";
+import type { AdherenceLevel, Blueprint, CampaignCaptions, ExportResult } from "@/lib/types";
 
 type Step = "UPLOAD_BRAND" | "UPLOAD_PRODUCT" | "PROMPT" | "GENERATING" | "RESULTS";
 
@@ -95,6 +96,7 @@ function CreateCampaignInner() {
   const [adherenceLevel, setAdherenceLevel] = useState<AdherenceLevel>("moderate");
   const [results, setResults] = useState<ExportResult[]>([]);
   const [lastBlueprint, setLastBlueprint] = useState<Blueprint | null>(null);
+  const [captions, setCaptions] = useState<CampaignCaptions | null>(null);
 
   const [heartbeatSecs, setHeartbeatSecs] = useState(0);
   const lastLogTimeRef = useRef<number>(Date.now());
@@ -235,6 +237,7 @@ function CreateCampaignInner() {
       addLog("Phase 4/5: Generating Flux background and rendering poster...");
       const genRes = await generateCampaign(planRes.blueprint);
       setCampaignId(genRes.campaign_id);
+      setCaptions(genRes.captions ?? null);
       addLog("✅ 1:1 poster rendered.");
 
       addLog("Phase 5/5: Rendering 9:16 and 16:9 formats...");
@@ -261,6 +264,7 @@ function CreateCampaignInner() {
     setResults([]);
     setLogs([]);
     setCampaignId(null);
+    setCaptions(null);
     setLibraryBrandId(null);
     if (isDemo) {
       setCurrentStep("PROMPT");
@@ -577,6 +581,8 @@ function CreateCampaignInner() {
                   <div className={styles.errorState}>Pipeline failed. Check logs above.</div>
                 )}
               </div>
+
+              {captions && <CaptionPanel captions={captions} />}
 
               {lastBlueprint && (
                 <details className={styles.blueprintCard}>

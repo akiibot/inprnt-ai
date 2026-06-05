@@ -26,15 +26,56 @@ from models.blueprint import (
     CampaignPlanResponse,
 )
 from models.video import VideoPlan, VideoGenerateResponse
-from services.gemini import plan_campaign
+from services.gemini import plan_campaign, generate_captions
 from services.video_planner import plan_video
 from services.video_generator import render_and_upload_video
 from services.supabase_client import get_brand, get_supabase, upload_file_to_storage
 from services.flux import generate_background
+from services.removebg import remove_background as strip_bg
 from compositor.template import build_html
 from compositor.renderer import render_poster_async
 
 _MOCK_DATA_DIR = Path(__file__).parent.parent.parent / "mock-data"
+
+
+def _read_image(url_or_path: str) -> bytes:
+    """
+    Read image bytes from a local file path or URL.
+    For Supabase storage URLs, uses the Supabase client (handles auth correctly).
+    For other HTTP URLs, falls back to plain requests with apikey header.
+    """
+    import requests as _requests
+
+    if not url_or_path.startswith("http"):
+        return Path(url_or_path).read_bytes()
+
+    # Supabase storage URL → parse bucket + path and use the SDK client
+    if settings.SUPABASE_URL and url_or_path.startswith(settings.SUPABASE_URL):
+        try:
+            # URL shape: .../storage/v1/object/public/{bucket}/{file_path}
+            #        or: .../storage/v1/object/{bucket}/{file_path}
+            marker = "/object/public/"
+            alt_marker = "/object/"
+            if marker in url_or_path:
+                rest = url_or_path.split(marker, 1)[1]
+            elif alt_marker in url_or_path:
+                rest = url_or_path.split(alt_marker, 1)[1]
+            else:
+                raise ValueError("Unrecognised Supabase storage URL format")
+            bucket, file_path = rest.split("/", 1)
+            from services.supabase_client import get_supabase
+            data = get_supabase().storage.from_(bucket).download(file_path)
+            return data
+        except Exception as e:
+            print(f"Supabase download failed ({e}), retrying with HTTP...")
+
+    # Generic HTTP fallback — add apikey header for Supabase in case bucket needs it
+    headers = {}
+    if settings.SUPABASE_URL and url_or_path.startswith(settings.SUPABASE_URL):
+        headers["apikey"] = settings.SUPABASE_SERVICE_KEY
+    resp = _requests.get(url_or_path, headers=headers, timeout=15)
+    resp.raise_for_status()
+    return resp.content
 
 
 def _load_cached_posters() -> Optional[dict]:
@@ -142,10 +183,16 @@ async def _render_blueprint(
     # 1. Background — run sync HTTP in executor so other renders proceed in parallel
     bg_url: Optional[str] = None
     bg_prompt = blueprint.background.prompt if blueprint.background else None
+    negative_prompt = ", ".join(brand_data.get("do_not_use", []))
     if bg_prompt:
         try:
             bg_bytes = await loop.run_in_executor(
-                None, lambda: generate_background(prompt=bg_prompt, width=1024, height=1024)
+                None, lambda: generate_background(
+                    prompt=bg_prompt,
+                    width=1024,
+                    height=1024,
+                    negative_prompt=negative_prompt,
+                )
             )
             bg_url = await loop.run_in_executor(
                 None, lambda: upload_file_to_storage(
@@ -156,9 +203,27 @@ async def _render_blueprint(
             print(f"Warning: Background generation failed ({label}): {e}")
 
     # 2. Compose HTML + Playwright render (truly async — overlaps with other renders)
+    product_image_url = brand_data.get("product_image_url")
+    if product_image_url and settings.REMOVEBG_API_KEY:
+        try:
+            import mimetypes
+            content_type = mimetypes.guess_type(str(product_image_url))[0] or "image/png"
+            _purl = product_image_url  # capture for lambda
+            _ct = content_type
+            img_bytes = await loop.run_in_executor(None, lambda: _read_image(_purl))
+            stripped = await loop.run_in_executor(None, lambda: strip_bg(img_bytes, _ct))
+            nobg_path = temp_dir / f"product_nobg_{label}.png"
+            await loop.run_in_executor(None, lambda: nobg_path.write_bytes(stripped))
+            product_image_url = str(nobg_path)
+            print(f"Remove.bg: product background stripped for {label} ({content_type})")
+        except Exception as e:
+            import traceback
+            print(f"ERROR: Remove.bg failed ({label}): {e}")
+            traceback.print_exc()
+
     assets = {
         "logo_url": brand_data.get("logo_url"),
-        "product_image_url": brand_data.get("product_image_url"),
+        "product_image_url": product_image_url,
         "background_url": bg_url,
     }
     html = build_html(blueprint.model_dump(), brand_data, assets)
@@ -264,6 +329,8 @@ async def generate_campaign_endpoint(blueprint: Blueprint):
             blueprint, brand_data, campaign_id, temp_dir
         )
 
+        captions = generate_captions(brand_data, blueprint.model_dump())
+
         ar = blueprint.format.aspect_ratio
         db_payload = {
             "id": campaign_id,
@@ -286,6 +353,7 @@ async def generate_campaign_endpoint(blueprint: Blueprint):
             poster_url=poster_url,
             background_url=bg_url,
             generation_time_seconds=round(elapsed, 2),
+            captions=captions,
         )
     except HTTPException:
         raise
@@ -377,9 +445,12 @@ async def generate_all_endpoint(request: GenerateAllRequest):
         if not settings.DEMO_FALLBACK_MODE:
             get_supabase().table("campaigns").insert(db_payload).execute()
 
+        captions = generate_captions(brand_data, first_blueprint.model_dump())
+
         return {
             "campaign_id": campaign_id,
             "formats": formats_out,
+            "captions": captions,
             "total_generation_time_seconds": round(total_elapsed, 2),
         }
     except HTTPException:

@@ -16,6 +16,7 @@ from pydantic import ValidationError
 from config import settings
 from prompts.brand_extraction import BRAND_EXTRACTION_SYSTEM_PROMPT
 from prompts.campaign_planning import CAMPAIGN_PLANNING_SYSTEM_PROMPT
+from prompts.caption_generation import CAPTION_GENERATION_SYSTEM_PROMPT
 from models.brand import Brand
 from models.blueprint import Blueprint
 
@@ -228,7 +229,7 @@ def plan_campaign(brand: dict, prompt: str, format_spec: dict, adherence_level: 
             response_text, model_used = _call_gemini_with_fallback(
                 system_instruction=system_instruction,
                 contents=contents,
-                thinking_budget=1024,
+                thinking_budget=8192,
             )
             blueprint_dict = json.loads(response_text)
             # brand_id is injected by the caller (campaigns.py) after this returns,
@@ -273,5 +274,46 @@ def plan_campaign(brand: dict, prompt: str, format_spec: dict, adherence_level: 
             f"{CAMPAIGN_PLANNING_SYSTEM_PROMPT}\n\nPREVIOUS ERROR — FIX THIS BEFORE RESPONDING:\n{last_error}"
         )
         retries += 1
+
+
+def generate_captions(brand: dict, blueprint: dict) -> dict:
+    """
+    Generates platform-specific marketing captions from brand voice + campaign strategy.
+    Returns captions dict or a safe fallback on failure — never breaks the main pipeline.
+    """
+    user_message = f"""
+BRAND PROFILE:
+- Name: {brand.get('brand_name')}
+- Personality: {', '.join(brand.get('brand_personality', []))}
+- Voice tone: {brand.get('voice', {}).get('tone')}
+- Formality: {brand.get('voice', {}).get('formality')}
+- Language: {brand.get('voice', {}).get('language')}
+- Do NOT use: {', '.join(brand.get('do_not_use', []))}
+- Tagline: {brand.get('tagline')}
+
+CAMPAIGN:
+- Name: {blueprint.get('campaign_name')}
+- Strategy: {blueprint.get('campaign_strategy')}
+
+Write marketing captions for this campaign following the system rules exactly.
+"""
+
+    try:
+        raw, _ = _call_gemini_with_fallback(
+            system_instruction=CAPTION_GENERATION_SYSTEM_PROMPT,
+            contents=[{"role": "user", "parts": [{"text": user_message}]}],
+            thinking_budget=0,
+        )
+        clean = raw.strip().removeprefix("```json").removesuffix("```").strip()
+        return json.loads(clean)
+    except Exception as e:
+        print(f"Caption generation failed: {e}")
+        return {
+            "instagram": f"{blueprint.get('campaign_name')} ⚡ {brand.get('tagline')}",
+            "facebook": f"{blueprint.get('campaign_name')} — {brand.get('tagline')}",
+            "tiktok": f"{brand.get('tagline')} 🔥",
+            "caption_bn": brand.get('tagline_bn', ''),
+            "hashtags": [f"#{brand.get('brand_name', '').replace(' ', '')}"],
+        }
 
     raise Exception(f"Campaign planning failed after {MAX_RETRIES} retries. Last error: {last_error}")
