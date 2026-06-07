@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   UploadCloud, Check, ChevronRight, Loader2,
-  Play, Download, Zap, ArrowLeft, BookMarked,
+  Play, Download, Zap, ArrowLeft, BookMarked, Pencil,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import styles from "./create.module.css";
@@ -565,15 +565,29 @@ function CreateCampaignInner() {
                     </div>
                     <div className={styles.resultFooter}>
                       <span className={styles.resultFormat}>{res.format_name}</span>
-                      <a
-                        href={res.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className={styles.downloadBtn}
-                        aria-label={`Download ${res.format_name}`}
-                      >
-                        <Download size={16} />
-                      </a>
+                      <div className={styles.resultActions}>
+                        {campaignId && (
+                          <Link
+                            href={`/campaign/${campaignId}/editor?ar=${
+                              res.aspect_ratio ??
+                              (res.width === res.height ? "1:1" : res.height > res.width ? "9:16" : "16:9")
+                            }&url=${encodeURIComponent(res.url)}`}
+                            className={styles.editBtn}
+                            aria-label={`Edit ${res.format_name}`}
+                          >
+                            <Pencil size={14} />
+                          </Link>
+                        )}
+                        <a
+                          href={res.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={styles.downloadBtn}
+                          aria-label={`Download ${res.format_name}`}
+                        >
+                          <Download size={16} />
+                        </a>
+                      </div>
                     </div>
                   </div>
                 ))}

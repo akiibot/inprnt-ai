@@ -1,0 +1,231 @@
+.panel {
+  width: 280px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.02);
+  overflow-y: auto;
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sectionLabel {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-grey-400);
+}
+
+.select {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-white);
+  padding: var(--space-2) var(--space-3);
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+}
+
+.select:focus {
+  border-color: var(--color-primary);
+}
+
+.numberInput {
+  width: 80px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-white);
+  padding: var(--space-2) var(--space-3);
+  font-size: 13px;
+  outline: none;
+}
+
+.numberInput:focus {
+  border-color: var(--color-primary);
+}
+
+.toggleGroup {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.toggleBtn {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-grey-400);
+  font-size: 12px;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.toggleBtn:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--color-white);
+}
+
+.toggleBtn.active {
+  border-color: var(--color-primary);
+  background: rgba(255, 75, 0, 0.15);
+  color: var(--color-primary);
+}
+
+.colorRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.colorSwatch {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: var(--transition-fast);
+}
+
+.colorSwatch:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.colorHex {
+  font-size: 12px;
+  color: var(--color-grey-400);
+  font-family: monospace;
+}
+
+.clearBtn {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--color-grey-400);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.clearBtn:hover {
+  color: var(--color-white);
+}
+
+.pickerWrap {
+  margin-top: var(--space-2);
+}
+
+.pickerWrap .react-colorful {
+  width: 100% !important;
+}
+
+.shadowHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Toggle switch */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 32px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switchTrack {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.12);
+  transition: var(--transition-fast);
+}
+
+.switchTrack::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: var(--color-white);
+  transition: var(--transition-fast);
+}
+
+.switch input:checked + .switchTrack {
+  background: var(--color-primary);
+}
+
+.switch input:checked + .switchTrack::after {
+  transform: translateX(14px);
+}
+
+.sliderRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.sliderLabel {
+  font-size: 11px;
+  color: var(--color-grey-400);
+  width: 24px;
+}
+
+.slider {
+  flex: 1;
+  accent-color: var(--color-primary);
+}
+
+.sliderValue {
+  font-size: 11px;
+  color: var(--color-grey-400);
+  width: 20px;
+  text-align: right;
+}
+
+.replaceBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  color: var(--color-white);
+  font-size: 13px;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  width: 100%;
+}
+
+.replaceBtn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: rgba(255, 75, 0, 0.08);
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--color-grey-400);
+  line-height: 1.5;
+}

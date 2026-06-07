@@ -7,6 +7,7 @@ POST /api/campaigns/{id}/plan-video
 POST /api/campaigns/{id}/generate-video
 """
 import asyncio
+import base64
 import json
 import shutil
 import time
@@ -584,3 +585,41 @@ async def generate_video_endpoint(campaign_id: str, body: GenerateVideoRequest):
         video_url=video_url,
         generation_time_seconds=round(elapsed, 2),
     )
+
+
+# ── Editor save ───────────────────────────────────────────────────────────────
+
+class SaveEditRequest(BaseModel):
+    image_data: str                          # "data:image/png;base64,..."
+    format: Literal["1:1", "9:16", "16:9"]
+
+
+@router.post("/campaigns/{campaign_id}/save-edit")
+async def save_campaign_edit(campaign_id: str, body: SaveEditRequest):
+    """Accept a Fabric.js canvas export, upload it to Supabase, update the campaign row."""
+    db = get_supabase()
+    if not db.table("campaigns").select("id").eq("id", campaign_id).execute().data:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    prefix = "data:image/png;base64,"
+    b64 = body.image_data[len(prefix):] if body.image_data.startswith(prefix) else body.image_data
+    try:
+        png_bytes = base64.b64decode(b64)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid image_data: {exc}") from exc
+
+    label = _ar_label(body.format)
+    # Unique filename per save so the public URL always changes — otherwise the
+    # browser serves a stale cached thumbnail after a re-edit.
+    storage_path = f"{campaign_id}/poster_{label}_edited_{int(time.time())}.png"
+
+    loop = asyncio.get_running_loop()
+    new_url = await loop.run_in_executor(
+        None,
+        lambda: upload_file_to_storage("campaigns", storage_path, png_bytes, "image/png"),
+    )
+
+    column = _POSTER_COLUMN[body.format]
+    db.table("campaigns").update({column: new_url}).eq("id", campaign_id).execute()
+
+    return {"url": new_url, "format": body.format}

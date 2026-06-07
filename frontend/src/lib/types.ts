@@ -220,6 +220,53 @@ export interface BrandSummary {
   created_at: string;
 }
 
+// ── Editor ────────────────────────────────────────────────────
+
+export type EditorLayerType = "text" | "image" | "overlay" | "background" | "shape";
+
+export interface FabricObjectData {
+  layerId: string;
+  layerType: EditorLayerType;
+  assetKey?: "logo_url" | "product_image_url";
+  name?: string;
+  locked?: boolean;
+}
+
+export interface ActiveTextState {
+  content: string;
+  fontFamily: string;
+  fontWeight: string;
+  fontStyle: "normal" | "italic";
+  fill: string;
+  fontSize: number;
+  textAlign: "left" | "center" | "right";
+  shadowEnabled: boolean;
+  shadowColor: string;
+  shadowBlur: number;
+  textBackgroundColor: string;
+  charSpacing: number;
+  lineHeight: number;
+}
+
+/** Common props editable on any selected object (text, image, shape). */
+export interface ActiveObjectState {
+  opacity: number;
+  fill: string;          // shape fill (ignored for image)
+}
+
+/** One row in the layers panel. */
+export interface EditorObjectSummary {
+  id: string;
+  name: string;
+  type: EditorLayerType;
+  visible: boolean;
+  locked: boolean;
+  isSelected: boolean;
+}
+
+export type EditorShapeKind = "rect" | "circle" | "line";
+export type EditorAlign = "left" | "center-h" | "right" | "top" | "center-v" | "bottom";
+
 // ── Manual Brand Creation ────────────────────────────────────
 
 export interface ManualBrandPayload {

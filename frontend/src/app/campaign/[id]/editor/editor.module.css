@@ -1,0 +1,51 @@
+.editorLayout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+.editorNav {
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 0 var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.02);
+  flex-shrink: 0;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-grey-400);
+  text-decoration: none;
+  font-size: 13px;
+  transition: var(--transition-fast);
+}
+
+.backLink:hover {
+  color: var(--color-white);
+}
+
+.editorTitle {
+  font-size: 13px;
+  color: var(--color-white);
+  font-weight: 500;
+}
+
+.editorDivider {
+  color: var(--color-border);
+}
+
+.loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-grey-400);
+  font-size: 13px;
+}

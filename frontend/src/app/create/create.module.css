@@ -439,6 +439,31 @@
   color: var(--color-grey-400);
 }
 
+.resultActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.editBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  color: var(--color-grey-400);
+  text-decoration: none;
+  transition: var(--transition-fast);
+}
+
+.editBtn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-dim);
+}
+
 .downloadBtn {
   display: inline-flex;
   align-items: center;

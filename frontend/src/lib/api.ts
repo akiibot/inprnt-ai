@@ -22,6 +22,7 @@ import type {
   VideoGenerateResponse,
 } from "./types";
 
+
 const API_BASE = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api`;
 
 class ApiError extends Error {
@@ -219,6 +220,19 @@ export async function generateCampaignVideo(
   return request<VideoGenerateResponse>(`/campaigns/${campaignId}/generate-video`, {
     method: "POST",
     body: JSON.stringify({ video_plan: videoPlan, aspect_ratio: aspectRatio }),
+  });
+}
+
+// ── Editor ────────────────────────────────────────────────────
+
+export async function saveEditorExport(
+  campaignId: string,
+  imageData: string,
+  format: AspectRatio
+): Promise<{ url: string; format: string }> {
+  return request(`/campaigns/${campaignId}/save-edit`, {
+    method: "POST",
+    body: JSON.stringify({ image_data: imageData, format }),
   });
 }
 
