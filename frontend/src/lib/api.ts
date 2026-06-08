@@ -173,11 +173,24 @@ export async function runDemoGenerate(
 }
 
 // ── Campaign Plan ─────────────────────────────────────────────
+// These go direct to Railway — Gemini + Flux + Playwright can exceed Vercel's 60s proxy timeout.
+
+async function directRequest<T>(path: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(`${DIRECT_API_BASE}${path}`, {
+    ...options,
+    headers: { "Content-Type": "application/json", ...options?.headers },
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => null);
+    throw new Error(`API error ${res.status}: ${JSON.stringify(detail)}`);
+  }
+  return res.json();
+}
 
 export async function planCampaign(
   data: CampaignPlanRequest
 ): Promise<CampaignPlanResponse> {
-  return request<CampaignPlanResponse>("/campaigns/plan", {
+  return directRequest<CampaignPlanResponse>("/campaigns/plan", {
     method: "POST",
     body: JSON.stringify(data),
   });
@@ -188,7 +201,7 @@ export async function planCampaign(
 export async function generateCampaign(
   blueprint: Blueprint
 ): Promise<CampaignGenerateResponse> {
-  return request<CampaignGenerateResponse>("/campaigns/generate", {
+  return directRequest<CampaignGenerateResponse>("/campaigns/generate", {
     method: "POST",
     body: JSON.stringify(blueprint),
   });
@@ -200,7 +213,7 @@ export async function generateAllFormats(data: {
   adherence_level: string;
   product_image_available: boolean;
 }): Promise<GenerateAllResponse> {
-  return request<GenerateAllResponse>("/campaigns/generate-all", {
+  return directRequest<GenerateAllResponse>("/campaigns/generate-all", {
     method: "POST",
     body: JSON.stringify(data),
   });
@@ -255,7 +268,7 @@ export async function exportCampaignFormats(data: {
   campaign_id: string;
   formats: { name: string; width: number; height: number; aspect_ratio: AspectRatio }[];
 }): Promise<ExportCampaignResponse> {
-  return request<ExportCampaignResponse>("/export", {
+  return directRequest<ExportCampaignResponse>("/export", {
     method: "POST",
     body: JSON.stringify(data),
   });
