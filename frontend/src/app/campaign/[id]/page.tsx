@@ -39,7 +39,7 @@ export default function CampaignPage({ params }: { params: { id: string } }) {
 
   // Video state
   const [videoStep, setVideoStep] = useState<VideoStep>("idle");
-  const [videoPlan, setVideoPlan] = useState<VeoPlan | null>(null);
+  const [_videoPlan, setVideoPlan] = useState<VeoPlan | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [videoElapsed, setVideoElapsed] = useState<number | null>(null);
@@ -192,7 +192,7 @@ export default function CampaignPage({ params }: { params: { id: string } }) {
                     <Video size={32} strokeWidth={1.5} />
                   </div>
                   <p className={styles.videoIdleText}>
-                    Generate an animated MP4 video from this campaign's poster.
+                    Generate an animated MP4 video from this campaign&apos;s poster.
                     Powered by Google Veo 3.1.
                   </p>
                   <button className={styles.videoGenBtn} onClick={handleGenerateVideo}>

@@ -2,7 +2,6 @@
 
 import React, { useState, useRef, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ChevronRight,
@@ -113,7 +112,6 @@ const isValidHex = (s: string) => /^#[0-9A-Fa-f]{6}$/.test(s);
 /* ───────────────────── Component ───────────────────── */
 
 export default function ManualBrandPage() {
-  const router = useRouter();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormState>({ ...INITIAL_FORM });
   const [openPicker, setOpenPicker] = useState<string | null>(null);

@@ -12,10 +12,16 @@ const nextConfig = {
   },
   // Proxy /api/* to FastAPI backend in development
   async rewrites() {
+    const apiUrl = (() => {
+      const raw = process.env.NEXT_PUBLIC_API_URL || "";
+      if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
+      if (raw) return `https://${raw}`;
+      return "http://localhost:8000";
+    })();
     return [
       {
         source: "/api/:path*",
-        destination: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/:path*`,
+        destination: `${apiUrl}/api/:path*`,
       },
     ];
   },
