@@ -23,7 +23,9 @@ import type {
 } from "./types";
 
 
-const API_BASE = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api`;
+// Always use relative path — requests go through Next.js rewrite → Railway backend.
+// NEXT_PUBLIC_API_URL is only needed in next.config.js (server-side rewrite destination).
+const API_BASE = `/api`;
 
 class ApiError extends Error {
   constructor(
