@@ -225,10 +225,17 @@ export async function planCampaignVideo(
   campaignId: string,
   aspectRatio: AspectRatio = "1:1",
 ): Promise<VeoPlanResponse> {
-  return request<VeoPlanResponse>(`/campaigns/${campaignId}/plan-video`, {
+  // Direct to Railway — Gemini call can exceed Vercel's 60s proxy timeout
+  const res = await fetch(`${DIRECT_API_BASE}/campaigns/${campaignId}/plan-video`, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ aspect_ratio: aspectRatio }),
   });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => null);
+    throw new Error(`Plan video failed: ${res.status} ${JSON.stringify(detail)}`);
+  }
+  return res.json();
 }
 
 export async function generateCampaignVideo(

@@ -33,23 +33,19 @@ app = FastAPI(
 )
 
 # ── CORS ─────────────────────────────────────────────────────────────────────
-_DEV_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:3001",
-    "http://127.0.0.1:3001",
-    "http://localhost:3002",
-    "http://127.0.0.1:3002",
-    "http://localhost:3005",
-    "http://127.0.0.1:3005",
-]
-# Set FRONTEND_URL in Railway to your Vercel deployment URL, e.g. https://imprnt.vercel.app
+# allow_origin_regex covers all Vercel preview + production deployments automatically.
+_ORIGIN_REGEX = (
+    r"https?://localhost(:\d+)?"
+    r"|https://[\w-]+-akiiibots-projects\.vercel\.app"
+    r"|https://inprnt-ai[\w-]*\.vercel\.app"
+)
+# FRONTEND_URL can still override / extend with a custom domain e.g. https://imprnt.ai
 _extra = [o.strip() for o in os.getenv("FRONTEND_URL", "").split(",") if o.strip()]
-_ALLOWED_ORIGINS = _DEV_ORIGINS + _extra
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_ALLOWED_ORIGINS,
+    allow_origins=_extra or ["*"],
+    allow_origin_regex=_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
