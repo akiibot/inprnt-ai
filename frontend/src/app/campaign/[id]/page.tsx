@@ -39,7 +39,7 @@ export default function CampaignPage({ params }: { params: { id: string } }) {
 
   // Video state
   const [videoStep, setVideoStep] = useState<VideoStep>("idle");
-  const [_videoPlan, setVideoPlan] = useState<VeoPlan | null>(null);
+  const [, setVideoPlan] = useState<VeoPlan | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [videoElapsed, setVideoElapsed] = useState<number | null>(null);
