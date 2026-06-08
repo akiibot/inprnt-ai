@@ -2,6 +2,7 @@
 Imprnt AI — FastAPI Backend
 Main application entry point with CORS and all router registrations.
 """
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -32,18 +33,23 @@ app = FastAPI(
 )
 
 # ── CORS ─────────────────────────────────────────────────────────────────────
+_DEV_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+    "http://localhost:3002",
+    "http://127.0.0.1:3002",
+    "http://localhost:3005",
+    "http://127.0.0.1:3005",
+]
+# Set FRONTEND_URL in Railway to your Vercel deployment URL, e.g. https://imprnt.vercel.app
+_extra = [o.strip() for o in os.getenv("FRONTEND_URL", "").split(",") if o.strip()]
+_ALLOWED_ORIGINS = _DEV_ORIGINS + _extra
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3001",
-        "http://localhost:3002",
-        "http://127.0.0.1:3002",
-        "http://localhost:3005",
-        "http://127.0.0.1:3005",
-    ],
+    allow_origins=_ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
