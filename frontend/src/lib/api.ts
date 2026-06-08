@@ -17,8 +17,8 @@ import type {
   ExportCampaignResponse,
   AspectRatio,
   ManualBrandPayload,
-  VideoPlan,
-  VideoPlanResponse,
+  VeoPlan,
+  VeoPlanResponse,
   VideoGenerateResponse,
 } from "./types";
 
@@ -205,8 +205,8 @@ export async function generateAllFormats(data: {
 export async function planCampaignVideo(
   campaignId: string,
   aspectRatio: AspectRatio = "1:1",
-): Promise<VideoPlanResponse> {
-  return request<VideoPlanResponse>(`/campaigns/${campaignId}/plan-video`, {
+): Promise<VeoPlanResponse> {
+  return request<VeoPlanResponse>(`/campaigns/${campaignId}/plan-video`, {
     method: "POST",
     body: JSON.stringify({ aspect_ratio: aspectRatio }),
   });
@@ -214,12 +214,12 @@ export async function planCampaignVideo(
 
 export async function generateCampaignVideo(
   campaignId: string,
-  videoPlan: VideoPlan,
+  veoPlan: VeoPlan,
   aspectRatio: AspectRatio = "1:1",
 ): Promise<VideoGenerateResponse> {
   return request<VideoGenerateResponse>(`/campaigns/${campaignId}/generate-video`, {
     method: "POST",
-    body: JSON.stringify({ video_plan: videoPlan, aspect_ratio: aspectRatio }),
+    body: JSON.stringify({ veo_plan: veoPlan, aspect_ratio: aspectRatio }),
   });
 }
 

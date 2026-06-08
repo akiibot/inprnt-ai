@@ -208,6 +208,60 @@ def _margin_css(margin: Optional[dict]) -> str:
     return " ".join(parts)
 
 
+def _scale_layer(layer: dict, sx: float, sy: float) -> dict:
+    """
+    Return a deep copy of a blueprint layer with all numeric pixel values
+    scaled proportionally to the target canvas size.
+
+    sx = canvas_width  / 1080  (horizontal scale — text width, image width, x-margins)
+    sy = canvas_height / 1080  (vertical scale   — image height, y-margins)
+
+    Blueprints are authored for a 1080×1080 reference canvas.  This function
+    lets the same design look proportionally identical on 1080×1920 or 1920×1080.
+    Non-numeric values ("auto", None, strings) are left untouched.
+    """
+    import copy as _copy
+    l = _copy.deepcopy(layer)
+
+    def _s(v, factor):
+        """Scale v by factor only when v is a real number."""
+        return round(v * factor) if isinstance(v, (int, float)) else v
+
+    # ── Text properties ───────────────────────────────────────────
+    if "font_size" in l:
+        l["font_size"] = _s(l["font_size"], sx)
+    if "max_width" in l:
+        l["max_width"] = _s(l["max_width"], sx)
+    if "letter_spacing" in l and l["letter_spacing"] is not None:
+        l["letter_spacing"] = round(l["letter_spacing"] * sx, 1)
+    if "border_radius" in l:
+        l["border_radius"] = _s(l["border_radius"], min(sx, sy))
+
+    # ── Image / element size ──────────────────────────────────────
+    size = l.get("size")
+    if isinstance(size, dict):
+        if isinstance(size.get("width"), (int, float)):
+            size["width"] = _s(size["width"], sx)
+        if isinstance(size.get("height"), (int, float)):
+            size["height"] = _s(size["height"], sy)
+
+    # ── Margins (top/bottom → sy, left/right → sx) ───────────────
+    margin = l.get("margin")
+    if isinstance(margin, dict):
+        for side, factor in (("top", sy), ("bottom", sy), ("left", sx), ("right", sx)):
+            if isinstance(margin.get(side), (int, float)):
+                margin[side] = _s(margin[side], factor)
+
+    # ── Padding (top/bottom → sy, left/right → sx) ───────────────
+    padding = l.get("padding")
+    if isinstance(padding, dict):
+        for side, factor in (("top", sy), ("bottom", sy), ("left", sx), ("right", sx)):
+            if isinstance(padding.get(side), (int, float)):
+                padding[side] = _s(padding[side], factor)
+
+    return l
+
+
 def _padding_css(padding: Optional[dict]) -> str:
     if not padding:
         return ""
@@ -285,6 +339,11 @@ def _render_text(layer: dict) -> str:
     # CTA button variant
     if bg_color:
         pad_css = _padding_css(padding) if padding else "padding:12px 24px;"
+        _r, _g, _b = _hex_to_rgb(bg_color)
+        box_shadow = (
+            f"box-shadow: 0 4px 24px rgba({_r},{_g},{_b},0.55), "
+            f"0 2px 8px rgba(0,0,0,0.40);"
+        )
         return (
             f'<div {lang_attr} style="position:absolute; {pos_css} {margin_css} z-index:{z}; '
             f'text-align:{text_align};">'
@@ -292,7 +351,7 @@ def _render_text(layer: dict) -> str:
             f'font-size:{font_size}px; font-weight:{font_weight}; color:{color}; '
             f'background:{bg_color}; {pad_css} border-radius:{border_r}px; '
             f'text-transform:{transform}; line-height:{line_height}; {ls_css} '
-            f'white-space:nowrap;">'
+            f'{box_shadow} white-space:nowrap;">'
             f'{content}</span></div>'
         )
 
@@ -324,7 +383,7 @@ def _render_text(layer: dict) -> str:
     )
 
 
-def _render_image(layer: dict, asset_uri: str, accent: str = "#000000") -> str:
+def _render_image(layer: dict, asset_uri: str, accent: str = "#000000", canvas_width: int = 1080) -> str:
     """Render an image layer (logo or product image)."""
     if not asset_uri:
         return ""
@@ -335,6 +394,20 @@ def _render_image(layer: dict, asset_uri: str, accent: str = "#000000") -> str:
     pos    = layer.get("position", "top-left")
     margin = layer.get("margin", {})
     asset_key = layer.get("asset_key", "")
+
+    # Safety net for product images: enforce a minimum hero size regardless of
+    # what Gemini specifies. The minimum is 38% of canvas width (~410px on 1080).
+    # This catches two failure modes:
+    #   1. auto+auto  — image renders at intrinsic file size (typically ~200px)
+    #   2. explicit but undersized — Gemini sets e.g. width:220 despite the prompt
+    if asset_key == "product_image_url":
+        min_w = int(canvas_width * 0.38)
+        if w == "auto" and h == "auto":
+            # No size specified at all — use 42% as the default
+            w = int(canvas_width * 0.42)
+        elif isinstance(w, (int, float)) and w < min_w:
+            # Explicit width is set but too small — clamp up to minimum
+            w = min_w
 
     pos_css    = POSITION_CSS.get(pos, POSITION_CSS["top-left"])
     margin_css = _margin_css(margin)
@@ -421,6 +494,16 @@ def build_html(blueprint: dict, brand: dict, assets: dict) -> str:
     # ── Sort layers by z_index ────────────────────────────────────
     sorted_layers = sorted(layers, key=lambda l: l.get("z_index", 0))
 
+    # ── Scale all layer values to match the actual canvas size ────
+    # Blueprints are authored for a 1080×1080 reference canvas.
+    # Scaling ensures text, images, and margins look proportionally
+    # identical on 1080×1920 (9:16) and 1920×1080 (16:9) formats.
+    _REF = 1080
+    sx = width  / _REF   # horizontal scale (font-size, widths, x-margins)
+    sy = height / _REF   # vertical scale   (heights, y-margins)
+    if sx != 1.0 or sy != 1.0:
+        sorted_layers = [_scale_layer(l, sx, sy) for l in sorted_layers]
+
     # Brand accent used for the product-image glow (falls back to primary/white).
     brand_colors = brand.get("colors", {}) if isinstance(brand, dict) else {}
     accent = brand_colors.get("accent") or brand_colors.get("primary") or "#FFFFFF"
@@ -444,7 +527,7 @@ def build_html(blueprint: dict, brand: dict, assets: dict) -> str:
                 uri = asset_uris.get(asset_key, "")
                 if not uri and optional:
                     continue  # skip optional layers with missing assets
-                layer_html_parts.append(_render_image(layer, uri, accent))
+                layer_html_parts.append(_render_image(layer, uri, accent, canvas_width=width))
 
     layers_html = "\n    ".join(layer_html_parts)
 

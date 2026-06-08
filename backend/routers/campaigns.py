@@ -26,10 +26,10 @@ from models.blueprint import (
     CampaignPlanRequest,
     CampaignPlanResponse,
 )
-from models.video import VideoPlan, VideoGenerateResponse
+from models.video import VeoPlan, VideoGenerateResponse
 from services.gemini import plan_campaign, generate_captions
 from services.video_planner import plan_video
-from services.video_generator import render_and_upload_video
+from services.veo_generator import generate_and_upload_veo_video
 from services.supabase_client import get_brand, get_supabase, upload_file_to_storage
 from services.flux import generate_background
 from services.removebg import remove_background as strip_bg
@@ -476,57 +476,51 @@ async def get_campaign_endpoint(campaign_id: str):
 # ── Video endpoints ───────────────────────────────────────────────────────────
 
 class PlanVideoRequest(BaseModel):
-    adherence_level: Literal["strict", "moderate", "creative"] = "moderate"
     aspect_ratio: Literal["1:1", "9:16", "16:9"] = "1:1"
 
 
 class GenerateVideoRequest(BaseModel):
-    video_plan: dict
+    veo_plan: dict
     aspect_ratio: Literal["1:1", "9:16", "16:9"] = "1:1"
 
 
 @router.post("/campaigns/{campaign_id}/plan-video")
 async def plan_video_endpoint(campaign_id: str, body: PlanVideoRequest):
     """
-    Reads the stored campaign blueprint and asks Gemini to choreograph
-    GSAP entrance animations for every layer. Returns video_plan.json.
+    Asks Gemini to write a cinematic motion prompt for Veo 3.1.
+    Returns veo_plan with motion_prompt, aspect_ratio, duration_seconds.
     """
     db = get_supabase()
-    row = db.table("campaigns").select("*").eq("id", campaign_id).execute()
+    row = db.table("campaigns").select("brand_id").eq("id", campaign_id).execute()
     if not row.data:
         raise HTTPException(status_code=404, detail="Campaign not found")
 
-    campaign = row.data[0]
-    blueprint = campaign.get("blueprint")
-    if not blueprint:
-        raise HTTPException(status_code=400, detail="Campaign has no stored blueprint")
-
-    brand_id = campaign.get("brand_id")
+    brand_id = row.data[0].get("brand_id")
     brand_data = get_brand(brand_id)
     if not brand_data:
         raise HTTPException(status_code=404, detail=f"Brand {brand_id} not found")
 
     try:
         loop = asyncio.get_running_loop()
-        video_plan: VideoPlan = await loop.run_in_executor(
+        veo_plan: VeoPlan = await loop.run_in_executor(
             None,
             lambda: plan_video(
                 brand=_brand_profile(brand_data),
-                blueprint=blueprint,
                 aspect_ratio=body.aspect_ratio,
             ),
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Video planning failed: {e}")
 
-    return {"video_plan": video_plan.model_dump()}
+    return {"veo_plan": veo_plan.model_dump()}
 
 
 @router.post("/campaigns/{campaign_id}/generate-video", response_model=VideoGenerateResponse)
 async def generate_video_endpoint(campaign_id: str, body: GenerateVideoRequest):
     """
-    Renders a HyperFrames MP4 video from the given video_plan, uploads it to
-    Supabase, and saves a row to the videos table.
+    Fetches the stored poster for the requested aspect ratio, sends it to Veo 3.1
+    as the first frame with the motion prompt, uploads the resulting MP4, and saves
+    a row to the videos table.
     """
     db = get_supabase()
     row = db.table("campaigns").select("*").eq("id", campaign_id).execute()
@@ -534,37 +528,39 @@ async def generate_video_endpoint(campaign_id: str, body: GenerateVideoRequest):
         raise HTTPException(status_code=404, detail="Campaign not found")
 
     campaign = row.data[0]
-    blueprint = campaign.get("blueprint")
-    if not blueprint:
-        raise HTTPException(status_code=400, detail="Campaign has no stored blueprint")
-
-    # Pick the blueprint matching the requested aspect ratio, or fall back to stored one
     ar = body.aspect_ratio
-    blueprint["format"] = blueprint.get("format", {})
 
-    brand_id = campaign.get("brand_id")
-    brand_data = get_brand(brand_id)
-    if not brand_data:
-        raise HTTPException(status_code=404, detail=f"Brand {brand_id} not found")
+    # Resolve poster URL for this aspect ratio
+    poster_url = campaign.get(_POSTER_COLUMN.get(ar, "poster_1x1_url"))
+    if not poster_url:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No poster found for aspect ratio {ar}. Generate posters first.",
+        )
 
-    # Reuse the already-generated Flux background — no regeneration needed
-    assets = {
-        "logo_url": brand_data.get("logo_url"),
-        "product_image_url": brand_data.get("product_image_url"),
-        "background_url": campaign.get("background_url"),
-    }
+    # Download poster bytes (uses Supabase SDK path for Supabase URLs)
+    try:
+        loop = asyncio.get_running_loop()
+        poster_bytes: bytes = await loop.run_in_executor(
+            None, lambda: _read_image(poster_url)
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch poster image: {e}")
+
+    # Patch aspect_ratio in the veo_plan to the Veo-mapped value
+    veo_plan = dict(body.veo_plan)
+    _VEO_AR_MAP = {"1:1": "9:16", "9:16": "9:16", "16:9": "16:9"}
+    veo_plan["aspect_ratio"] = _VEO_AR_MAP.get(ar, "9:16")
 
     try:
-        video_url, elapsed = await render_and_upload_video(
+        video_url, elapsed = await generate_and_upload_veo_video(
             campaign_id=campaign_id,
-            blueprint=blueprint,
-            brand=brand_data,
-            assets=assets,
-            video_plan=body.video_plan,
+            poster_bytes=poster_bytes,
+            veo_plan=veo_plan,
         )
     except Exception as e:
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Video render failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Veo video generation failed: {e}")
 
     # Persist to videos table (best-effort — don't fail the response if table missing)
     video_id = str(uuid.uuid4())
@@ -572,9 +568,9 @@ async def generate_video_endpoint(campaign_id: str, body: GenerateVideoRequest):
         db.table("videos").insert({
             "id": video_id,
             "campaign_id": campaign_id,
-            "video_plan": body.video_plan,
+            "video_plan": veo_plan,
             "video_url": video_url,
-            "duration_sec": body.video_plan.get("duration_sec", 6.0),
+            "duration_sec": veo_plan.get("duration_seconds", 6),
             "aspect_ratio": ar,
         }).execute()
     except Exception as e:

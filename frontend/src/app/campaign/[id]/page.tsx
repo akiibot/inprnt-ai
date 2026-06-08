@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Download, ArrowLeft, Video, Loader2, Play, Check } from "lucide-react";
 import styles from "./page.module.css";
 import { planCampaignVideo, generateCampaignVideo } from "@/lib/api";
-import type { VideoPlan } from "@/lib/types";
+import type { VeoPlan } from "@/lib/types";
 
 interface CampaignData {
   id: string;
@@ -39,7 +39,7 @@ export default function CampaignPage({ params }: { params: { id: string } }) {
 
   // Video state
   const [videoStep, setVideoStep] = useState<VideoStep>("idle");
-  const [videoPlan, setVideoPlan] = useState<VideoPlan | null>(null);
+  const [videoPlan, setVideoPlan] = useState<VeoPlan | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [videoElapsed, setVideoElapsed] = useState<number | null>(null);
@@ -72,12 +72,12 @@ export default function CampaignPage({ params }: { params: { id: string } }) {
     try {
       // Step 1 — plan
       setVideoStep("planning");
-      const { video_plan } = await planCampaignVideo(campaign.id, "1:1");
-      setVideoPlan(video_plan);
+      const { veo_plan } = await planCampaignVideo(campaign.id, "1:1");
+      setVideoPlan(veo_plan);
 
-      // Step 2 — render
+      // Step 2 — generate
       setVideoStep("rendering");
-      const result = await generateCampaignVideo(campaign.id, video_plan, "1:1");
+      const result = await generateCampaignVideo(campaign.id, veo_plan, "1:1");
       setVideoUrl(result.video_url);
       setVideoElapsed(result.generation_time_seconds);
       setVideoStep("done");
@@ -192,8 +192,8 @@ export default function CampaignPage({ params }: { params: { id: string } }) {
                     <Video size={32} strokeWidth={1.5} />
                   </div>
                   <p className={styles.videoIdleText}>
-                    Generate an animated MP4 video from this campaign's poster and blueprint.
-                    Powered by HyperFrames + GSAP.
+                    Generate an animated MP4 video from this campaign's poster.
+                    Powered by Google Veo 3.1.
                   </p>
                   <button className={styles.videoGenBtn} onClick={handleGenerateVideo}>
                     <Play size={16} />
@@ -207,12 +207,12 @@ export default function CampaignPage({ params }: { params: { id: string } }) {
                   <Loader2 size={28} className="animate-spin" style={{ color: "var(--color-primary)" }} />
                   <div className={styles.videoProgressText}>
                     {videoStep === "planning"
-                      ? "AI Video Director planning animations…"
-                      : `HyperFrames rendering video… ${videoTimer}s`}
+                      ? "AI Director writing motion prompt…"
+                      : `Veo 3.1 generating video… ${videoTimer}s`}
                   </div>
                   {videoStep === "rendering" && (
                     <p className={styles.videoProgressHint}>
-                      Frame-by-frame capture + FFmpeg encode — takes 60–120s
+                      AI video generation — typically 30–120s, up to 6 min at peak load
                     </p>
                   )}
                 </div>

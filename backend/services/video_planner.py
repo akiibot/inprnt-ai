@@ -1,36 +1,31 @@
 """
 Imprnt AI — Video Planner Service
-Calls Gemini to generate a video_plan.json from a brand + blueprint.
+Calls Gemini to generate Veo 3.1 motion + audio prompts from a brand profile.
 """
 import json
 
 from google.genai import types
-from pydantic import ValidationError
 
-from models.video import VideoPlan
+from models.video import VeoPlan
 from prompts.video_planning import VIDEO_PLANNING_SYSTEM_PROMPT
 from services.gemini import _call_gemini_with_fallback
 
+# Maps app aspect ratios to Veo-supported values (Veo has no 1:1 option)
+_VEO_AR_MAP = {"1:1": "9:16", "9:16": "9:16", "16:9": "16:9"}
 
-def plan_video(brand: dict, blueprint: dict, aspect_ratio: str = "1:1") -> VideoPlan:
+
+def plan_video(brand: dict, aspect_ratio: str = "1:1") -> VeoPlan:
     """
-    Ask Gemini to choreograph GSAP entrance animations for every blueprint layer.
-    Returns a validated VideoPlan.
+    Ask Gemini to write a cinematic motion + audio prompt pair for Veo 3.1.
+    Returns a validated VeoPlan.
     """
-    # Canvas dimensions from the blueprint format
-    fmt = blueprint.get("format", {})
-    width = fmt.get("width", 1080)
-    height = fmt.get("height", 1080)
+    veo_ar = _VEO_AR_MAP.get(aspect_ratio, "9:16")
 
     input_text = f"""
 Brand Profile:
 {json.dumps(brand, indent=2)}
 
-Blueprint (layers with IDs):
-{json.dumps(blueprint, indent=2)}
-
 Aspect Ratio: {aspect_ratio}
-Canvas: {width}x{height}
 """
 
     contents = [types.Part.from_text(text=input_text)]
@@ -44,22 +39,39 @@ Canvas: {width}x{height}
             response_text, _ = _call_gemini_with_fallback(
                 system_instruction=VIDEO_PLANNING_SYSTEM_PROMPT,
                 contents=contents,
-                thinking_budget=0,
+                thinking_budget=1024,
             )
-            plan_dict = json.loads(response_text)
 
-            # Patch canvas from blueprint dimensions in case Gemini gets them wrong
-            plan_dict.setdefault("canvas", {})
-            plan_dict["canvas"]["width"] = width
-            plan_dict["canvas"]["height"] = height
+            # Strip accidental markdown fences
+            cleaned = (
+                response_text.strip()
+                .removeprefix("```json")
+                .removeprefix("```")
+                .removesuffix("```")
+                .strip()
+            )
 
-            return VideoPlan(**plan_dict)
+            plan_dict = json.loads(cleaned)
+
+            motion_prompt = plan_dict.get("motion_prompt", "").strip()
+            audio_prompt = plan_dict.get("audio_prompt", "").strip() or None
+
+            if len(motion_prompt) < 20:
+                last_error = f"motion_prompt too short: {motion_prompt!r}"
+                continue
+
+            return VeoPlan(
+                motion_prompt=motion_prompt,
+                audio_prompt=audio_prompt,
+                aspect_ratio=veo_ar,
+                duration_seconds=6,
+            )
 
         except json.JSONDecodeError as e:
             last_error = f"Invalid JSON: {e}. Raw: {response_text[:300]}"
-        except ValidationError as e:
-            last_error = f"Schema error: {e}"
         except Exception as e:
             raise  # Propagate quota / permission errors immediately
 
-    raise Exception(f"Video planning failed after {MAX_RETRIES + 1} attempts. Last: {last_error}")
+    raise Exception(
+        f"Video planning failed after {MAX_RETRIES + 1} attempts. Last: {last_error}"
+    )

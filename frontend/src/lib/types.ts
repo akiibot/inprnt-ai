@@ -186,22 +186,15 @@ export interface HealthResponse {
 
 // ── Video ─────────────────────────────────────────────────────
 
-export interface AnimationEntry {
-  layer_id: string;
-  gsap_from: Record<string, unknown>;
-  gsap_to: Record<string, unknown>;
-  start_sec: number;
+export interface VeoPlan {
+  motion_prompt: string;
+  audio_prompt?: string | null;
+  aspect_ratio: "16:9" | "9:16";
+  duration_seconds: number;
 }
 
-export interface VideoPlan {
-  duration_sec: number;
-  fps: number;
-  canvas: { width: number; height: number };
-  animations: AnimationEntry[];
-}
-
-export interface VideoPlanResponse {
-  video_plan: VideoPlan;
+export interface VeoPlanResponse {
+  veo_plan: VeoPlan;
 }
 
 export interface VideoGenerateResponse {
