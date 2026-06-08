@@ -18,7 +18,7 @@ from google.genai import types
 from services.gemini import get_gemini
 from services.supabase_client import upload_file_to_storage
 
-_VEO_MODEL = "veo-3.1-lite-generate-preview"
+_VEO_MODEL = "veo-3.1-lite-generate-001"
 _MAX_POLLS = 36   # 36 × 10s = 6-minute hard cap
 
 
