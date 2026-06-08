@@ -1,8 +1,6 @@
 frontend/
-frontend/node_modules/
-scripts/
-**/__pycache__/
-**/*.pyc
-backend/.venv/
+node_modules/
+.venv/
+__pycache__/
+*.pyc
 .env
-*.md
