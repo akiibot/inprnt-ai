@@ -27,6 +27,10 @@ import type {
 // NEXT_PUBLIC_API_URL is only needed in next.config.js (server-side rewrite destination).
 const API_BASE = `/api`;
 
+// Long-running endpoints (Veo video generation can take up to 6 min) go direct to
+// Railway to bypass Vercel's 60s proxy timeout. Falls back to relative in dev.
+const DIRECT_API_BASE = `${process.env.NEXT_PUBLIC_API_URL || ""}/api`;
+
 class ApiError extends Error {
   constructor(
     public status: number,
@@ -219,10 +223,17 @@ export async function generateCampaignVideo(
   veoPlan: VeoPlan,
   aspectRatio: AspectRatio = "1:1",
 ): Promise<VideoGenerateResponse> {
-  return request<VideoGenerateResponse>(`/campaigns/${campaignId}/generate-video`, {
+  // Call Railway directly — Veo polls for up to 6 min, Vercel proxy times out at 60s.
+  const res = await fetch(`${DIRECT_API_BASE}/campaigns/${campaignId}/generate-video`, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ veo_plan: veoPlan, aspect_ratio: aspectRatio }),
   });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => null);
+    throw new Error(`Video generation failed: ${res.status} ${JSON.stringify(detail)}`);
+  }
+  return res.json();
 }
 
 // ── Editor ────────────────────────────────────────────────────
