@@ -74,7 +74,7 @@ def get_gemini() -> genai.Client:
 def _get_mock_data(filename: str) -> dict:
     """Helper to load mock data for DEMO_FALLBACK_MODE."""
     # Assuming this runs with root context available relative to the backend dir
-    mock_path = Path(__file__).parent.parent.parent / "mock-data" / filename
+    mock_path = Path(__file__).parent.parent / "mock-data" / filename
     if mock_path.exists():
         with open(mock_path, "r", encoding="utf-8") as f:
             return json.load(f)

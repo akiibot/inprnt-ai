@@ -7,7 +7,7 @@ from pathlib import Path
 from supabase import create_client, Client
 from config import settings
 
-_MOCK_DATA_DIR = Path(__file__).parent.parent.parent / "mock-data"
+_MOCK_DATA_DIR = Path(__file__).parent.parent / "mock-data"
 _DEMO_BRAND_ID = "volt-bd-demo-001"
 
 # Initialize Supabase client globally

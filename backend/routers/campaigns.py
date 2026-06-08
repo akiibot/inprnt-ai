@@ -36,7 +36,7 @@ from services.removebg import remove_background as strip_bg
 from compositor.template import build_html
 from compositor.renderer import render_poster_async
 
-_MOCK_DATA_DIR = Path(__file__).parent.parent.parent / "mock-data"
+_MOCK_DATA_DIR = Path(__file__).parent.parent / "mock-data"
 
 
 def _read_image(url_or_path: str) -> bytes:

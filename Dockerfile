@@ -8,9 +8,8 @@ WORKDIR /app
 COPY backend/requirements.txt ./backend/requirements.txt
 RUN pip install --no-cache-dir -r backend/requirements.txt
 
-# Copy source — backend code + mock-data (used by DEMO_FALLBACK_MODE)
+# Copy source — mock-data lives inside backend/ for single-context builds
 COPY backend/ ./backend/
-COPY mock-data/ ./mock-data/
 
 WORKDIR /app/backend
 
