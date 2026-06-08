@@ -20,8 +20,21 @@ from prompts.caption_generation import CAPTION_GENERATION_SYSTEM_PROMPT
 from models.brand import Brand
 from models.blueprint import Blueprint
 
+# If a base64-encoded service account JSON is provided (Railway/cloud), decode it
+# into a temp file and point GOOGLE_SERVICE_ACCOUNT_PATH at it.
+if settings.GOOGLE_SERVICE_ACCOUNT_JSON and not settings.GOOGLE_SERVICE_ACCOUNT_PATH:
+    try:
+        import base64 as _b64
+        _sa_bytes = _b64.b64decode(settings.GOOGLE_SERVICE_ACCOUNT_JSON)
+        _sa_tmp = Path("/tmp/google_sa.json")
+        _sa_tmp.write_bytes(_sa_bytes)
+        settings.GOOGLE_SERVICE_ACCOUNT_PATH = str(_sa_tmp)
+        print("Gemini: decoded GOOGLE_SERVICE_ACCOUNT_JSON → /tmp/google_sa.json")
+    except Exception as e:
+        print(f"Warning: Failed to decode GOOGLE_SERVICE_ACCOUNT_JSON: {e}")
+
 # Initialize Gemini Client
-# Priority: service account JSON key (Vertex AI) > API key (AI Studio)
+# Priority: service account JSON (Vertex AI) > API key (AI Studio)
 client: Optional[genai.Client] = None
 if settings.GOOGLE_SERVICE_ACCOUNT_PATH:
     try:

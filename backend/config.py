@@ -16,9 +16,10 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # Google AI Studio (Gemini) — use ONE of these two:
+    # Google AI Studio (Gemini) — use ONE of these three (priority: JSON > path > key):
     GOOGLE_AI_API_KEY: str = ""             # API key from aistudio.google.com (starts with AIza)
-    GOOGLE_SERVICE_ACCOUNT_PATH: str = ""   # Path to a service account JSON key file
+    GOOGLE_SERVICE_ACCOUNT_PATH: str = ""   # Path to a service account JSON key file (local dev)
+    GOOGLE_SERVICE_ACCOUNT_JSON: str = ""   # Base64-encoded service account JSON (Railway/cloud)
 
     # Remove.bg
     REMOVEBG_API_KEY: str = ""
