@@ -258,7 +258,7 @@ async def _plan_and_render_format(
 ) -> dict:
     """
     Plan (Gemini, sync → executor) + render (Playwright, async) one format.
-    Designed to be run concurrently via asyncio.gather for all three formats.
+    Designed to be awaited sequentially for all three formats.
     """
     loop = asyncio.get_running_loop()
     blueprint, _ = await loop.run_in_executor(
@@ -368,7 +368,19 @@ async def _postergen_generate_all(
         )
         return {"fmt": fmt, "poster_url": url, "elapsed": time.time() - start}
 
-    results = await asyncio.gather(*[_render_one(fmt) for fmt in _ALL_FORMATS])
+    # Sequential calls — avoids bursting the Imagen per-minute quota.
+    # 1:1 is required; 9:16/16:9 are skipped and omitted on quota failure.
+    results = []
+    for fmt in _ALL_FORMATS:
+        try:
+            results.append(await _render_one(fmt))
+        except Exception as e:
+            if "RESOURCE_EXHAUSTED" in str(e) or "429" in str(e):
+                if fmt["aspect_ratio"] == "1:1":
+                    raise
+                print(f"[postergen] Quota hit for {fmt['aspect_ratio']}; skipping format.")
+            else:
+                raise
     return brain_output, results
 
 
@@ -552,20 +564,28 @@ async def generate_all_endpoint(request: GenerateAllRequest):
             }
 
         # ── Legacy engine: blueprint + HTML/Playwright (fully editable) ─────────
-        # All 3 formats planned + rendered in parallel — wall-clock time = longest single format
-        results = await asyncio.gather(*[
-            _plan_and_render_format(
-                brand_id=request.brand_id,
-                brand_data=brand_data,
-                prompt=request.prompt,
-                fmt=fmt,
-                adherence_level=request.adherence_level,
-                product_image_available=request.product_image_available,
-                campaign_id=campaign_id,
-                temp_dir=temp_dir,
-            )
-            for fmt in _ALL_FORMATS
-        ])
+        # Sequential calls — avoids bursting the Imagen per-minute quota.
+        # 1:1 is required; 9:16/16:9 are skipped and omitted on quota failure.
+        results = []
+        for fmt in _ALL_FORMATS:
+            try:
+                results.append(await _plan_and_render_format(
+                    brand_id=request.brand_id,
+                    brand_data=brand_data,
+                    prompt=request.prompt,
+                    fmt=fmt,
+                    adherence_level=request.adherence_level,
+                    product_image_available=request.product_image_available,
+                    campaign_id=campaign_id,
+                    temp_dir=temp_dir,
+                ))
+            except Exception as e:
+                if "RESOURCE_EXHAUSTED" in str(e) or "429" in str(e):
+                    if fmt["aspect_ratio"] == "1:1":
+                        raise
+                    print(f"[blueprint] Quota hit for {fmt['aspect_ratio']}; skipping format.")
+                else:
+                    raise
 
         formats_out = []
         poster_urls: dict[str, str] = {}
@@ -616,6 +636,14 @@ async def generate_all_endpoint(request: GenerateAllRequest):
         raise
     except Exception as e:
         traceback.print_exc()
+        if "RESOURCE_EXHAUSTED" in str(e) or "429" in str(e):
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "Imagen quota exceeded. Wait ~1 minute and retry, or request a quota increase: "
+                    "https://cloud.google.com/vertex-ai/docs/generative-ai/quotas-genai"
+                ),
+            )
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         if temp_dir.exists():

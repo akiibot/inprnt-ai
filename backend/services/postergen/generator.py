@@ -9,6 +9,7 @@ generation otherwise.
 Reuses Imprnt's shared Gemini client (services.gemini.get_gemini).
 """
 import io
+import time as _time
 from PIL import Image
 
 from google.genai import types
@@ -19,6 +20,25 @@ IMAGEN_MODEL = "imagen-3.0-generate-002"
 
 # Imprnt aspect-ratio labels → Imagen aspect ratios (Imagen supports these natively)
 _ASPECT_MAP = {"1:1": "1:1", "9:16": "9:16", "16:9": "16:9"}
+
+_RETRY_WAITS = [5, 15, 30]
+
+
+def _with_retry(fn):
+    """Call fn(), retrying up to 3 times on Imagen 429/RESOURCE_EXHAUSTED."""
+    last_exc = None
+    for i, wait in enumerate([0] + _RETRY_WAITS):
+        if wait:
+            print(f"[postergen.generator] Quota hit; retrying in {wait}s (attempt {i + 1}/4)...")
+            _time.sleep(wait)
+        try:
+            return fn()
+        except Exception as e:
+            if "RESOURCE_EXHAUSTED" in str(e) or "429" in str(e):
+                last_exc = e
+            else:
+                raise
+    raise last_exc
 
 
 def _load_bytes(path: str) -> bytes:
@@ -52,7 +72,9 @@ def generate_poster(
 
 
 def _generate_plain(client, prompt: str, gen_config: types.GenerateImagesConfig) -> Image.Image:
-    response = client.models.generate_images(model=IMAGEN_MODEL, prompt=prompt, config=gen_config)
+    response = _with_retry(lambda: client.models.generate_images(
+        model=IMAGEN_MODEL, prompt=prompt, config=gen_config
+    ))
     return _to_pil(response.generated_images[0].image.image_bytes)
 
 
@@ -71,15 +93,17 @@ def _generate_with_subject_reference(client, prompt, gen_config, product_path: s
             reference_type=types.ReferenceType.SUBJECT,
             subject_image_config=types.SubjectImageConfig(subject_type=types.SubjectType.PRODUCT),
         )
-        response = client.models.generate_images(
+        response = _with_retry(lambda: client.models.generate_images(
             model=IMAGEN_MODEL,
             prompt=prompt,
             config=types.GenerateImagesConfig(
                 **{k: v for k, v in gen_config.__dict__.items() if v is not None},
                 reference_images=[reference_image],
             ),
-        )
+        ))
         return _to_pil(response.generated_images[0].image.image_bytes)
     except Exception as e:
+        if "RESOURCE_EXHAUSTED" in str(e) or "429" in str(e):
+            raise
         print(f"[postergen.generator] Subject reference failed ({e}); plain generation.")
         return _generate_plain(client, prompt, gen_config)
