@@ -98,8 +98,10 @@ function CreateCampaignInner() {
   const [lastBlueprint, setLastBlueprint] = useState<Blueprint | null>(null);
   const [captions, setCaptions] = useState<CampaignCaptions | null>(null);
 
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [heartbeatSecs, setHeartbeatSecs] = useState(0);
   const lastLogTimeRef = useRef<number>(Date.now());
+  const abortRef = useRef(false);
 
   const brandInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -164,6 +166,8 @@ function CreateCampaignInner() {
 
   const handleDemoGenerate = async () => {
     if (!demoBrandId || !prompt.trim()) return;
+    abortRef.current = false;
+    setErrorMessage(null);
     setCurrentStep("GENERATING");
     setIsProcessing(true);
     setLogs([]);
@@ -172,6 +176,7 @@ function CreateCampaignInner() {
       addLog("Demo mode: loading Volt BD brand from mock data...");
       addLog("Calling campaigns/generate-all (serving cached demo posters)...");
       const res = await runDemoGenerate(demoBrandId, prompt, adherenceLevel);
+      if (abortRef.current) return;
       setCampaignId(res.campaign_id);
       const mapped: ExportResult[] = res.formats.map((f) => ({
         format_name: f.name,
@@ -182,11 +187,16 @@ function CreateCampaignInner() {
       }));
       setResults(mapped);
       addLog(`✅ Demo complete in ${res.total_generation_time_seconds.toFixed(1)}s`);
+      setCurrentStep("RESULTS");
     } catch (err: unknown) {
-      addLog("ERROR: " + (err instanceof Error ? err.message : String(err)));
+      if (!abortRef.current) {
+        const msg = err instanceof Error ? err.message : String(err);
+        addLog("ERROR: " + msg);
+        setErrorMessage(msg);
+      }
     } finally {
       setIsProcessing(false);
-      setCurrentStep("RESULTS");
+      abortRef.current = false;
     }
   };
 
@@ -195,6 +205,8 @@ function CreateCampaignInner() {
     const effectiveBrandId = urlBrandId || libraryBrandId;
     if (!effectiveBrandId && (!brandPdf || !brandLogo)) return;
 
+    abortRef.current = false;
+    setErrorMessage(null);
     setCurrentStep("GENERATING");
     setIsProcessing(true);
     setLogs([]);
@@ -207,6 +219,7 @@ function CreateCampaignInner() {
       if (!brandId) {
         addLog("Phase 1/5: Uploading brand guidelines and logo...");
         const brandRes = await uploadBrand(brandPdf!, brandLogo!);
+        if (abortRef.current) return;
         brandId = brandRes.brand_id;
         addLog(`✅ Brand extracted via Gemini: ${brandRes.brand.brand_name}`);
       } else if (urlBrandId) {
@@ -218,6 +231,7 @@ function CreateCampaignInner() {
       if (productImage) {
         addLog("Phase 2/5: Stripping background from product image via Remove.bg...");
         await uploadProductImage(brandId, productImage);
+        if (abortRef.current) return;
         addLog("✅ Product background removed & saved.");
       } else {
         addLog("Phase 2/5: Skipped (no product image).");
@@ -231,11 +245,13 @@ function CreateCampaignInner() {
         product_image_available: !!productImage,
         format: { name: "1:1 Post", width: 1080, height: 1080, aspect_ratio: "1:1" },
       });
+      if (abortRef.current) return;
       setLastBlueprint(planRes.blueprint);
       addLog(`✅ Blueprint: "${planRes.blueprint.campaign_name}"`);
 
       addLog("Phase 4/5: Generating Flux background and rendering poster...");
       const genRes = await generateCampaign(planRes.blueprint);
+      if (abortRef.current) return;
       setCampaignId(genRes.campaign_id);
       setCaptions(genRes.captions ?? null);
       addLog("✅ 1:1 poster rendered.");
@@ -249,20 +265,26 @@ function CreateCampaignInner() {
           { name: "16:9 Cover", width: 1920, height: 1080, aspect_ratio: "16:9" },
         ],
       });
+      if (abortRef.current) return;
       setResults(exportRes.exports);
       addLog("✅ Pipeline complete!");
+      setCurrentStep("RESULTS");
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      addLog("ERROR: " + message);
+      if (!abortRef.current) {
+        const message = err instanceof Error ? err.message : String(err);
+        addLog("ERROR: " + message);
+        setErrorMessage(message);
+      }
     } finally {
       setIsProcessing(false);
-      setCurrentStep("RESULTS");
+      abortRef.current = false;
     }
   };
 
   const handleStartNew = () => {
     setResults([]);
     setLogs([]);
+    setErrorMessage(null);
     setCampaignId(null);
     setCaptions(null);
     setLibraryBrandId(null);
@@ -512,7 +534,7 @@ function CreateCampaignInner() {
           {currentStep === "GENERATING" && (
             <div>
               <h2 className={styles.cardTitle}>
-                <Loader2 className="animate-spin" size={24} style={{ color: "var(--color-primary)" }} />
+                <Loader2 className={styles.spinIcon} size={24} style={{ color: "var(--color-primary)" }} />
                 Processing Pipeline...
               </h2>
               <div className={styles.terminal}>
@@ -520,17 +542,37 @@ function CreateCampaignInner() {
                   <div key={i} className={styles.logLine}>{log}</div>
                 ))}
                 {isProcessing && heartbeatSecs >= 3 && (
-                  <div className={styles.logLine} style={{ color: "#ffaa00", opacity: 0.85 }}>
+                  <div className={`${styles.logLine} ${styles.logLineWarning}`}>
                     ⏳ {lastLogLabel}... {heartbeatSecs}s
                   </div>
                 )}
                 {isProcessing && heartbeatSecs < 3 && (
-                  <div className={styles.logLine} style={{ opacity: 0.5 }}>
-                    <span className="animate-pulse">▋</span>
-                  </div>
+                  <div className={styles.logLine} style={{ opacity: 0.5 }}>▋</div>
                 )}
                 <div ref={logsEndRef} />
               </div>
+              {isProcessing && (
+                <div className={styles.actions} style={{ marginTop: "var(--space-6)" }}>
+                  <button
+                    className={styles.button}
+                    onClick={() => {
+                      abortRef.current = true;
+                      setIsProcessing(false);
+                      addLog("⚠ Generation cancelled.");
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+              {errorMessage && (
+                <div className={styles.errorState} style={{ marginTop: "var(--space-4)" }}>
+                  <p style={{ marginBottom: "var(--space-4)" }}>{errorMessage}</p>
+                  <button className={styles.button} onClick={handleStartNew}>
+                    Start Over
+                  </button>
+                </div>
+              )}
             </div>
           )}
 

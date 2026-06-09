@@ -39,9 +39,7 @@
   letter-spacing: 0.02em;
   text-transform: uppercase;
   margin-bottom: var(--space-2);
-  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--color-primary);
 }
 
 .subtitle {
@@ -155,8 +153,8 @@
 }
 
 .cardTitle {
+  font-family: var(--font-heading-en);
   font-size: 1.5rem;
-  font-weight: 600;
   margin-bottom: var(--space-6);
   display: flex;
   align-items: center;
@@ -305,7 +303,7 @@
 
 .adherenceHint {
   font-size: 0.8rem;
-  color: var(--color-grey-600);
+  color: var(--color-grey-400);
   margin-top: var(--space-1);
   min-height: 1.2em;
 }
@@ -325,7 +323,7 @@
   border: 1px solid var(--color-border);
   color: var(--color-white);
   padding: var(--space-3) var(--space-6);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   font-weight: 600;
   font-size: 1rem;
   cursor: pointer;
@@ -357,6 +355,22 @@
   cursor: not-allowed;
 }
 
+/* ── Spinner ── */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinIcon {
+  animation: spin 1s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinIcon {
+    animation: none;
+    opacity: 0.6;
+  }
+}
+
 /* ── Terminal ── */
 .terminal {
   background: #000;
@@ -374,6 +388,11 @@
 .logLine {
   margin-bottom: var(--space-1);
   word-break: break-word;
+}
+
+.logLineWarning {
+  color: var(--color-accent);
+  opacity: 0.85;
 }
 
 /* ── Results grid ── */
@@ -583,6 +602,14 @@
   border-radius: var(--radius-md);
   padding: var(--space-4) var(--space-5);
   font-size: 0.9375rem;
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .content {
+    /* Cancel the framer-motion y-translate; opacity fade is still ok */
+    --fm-y: 0px;
+  }
 }
 
 /* ── Mobile ── */

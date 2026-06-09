@@ -46,14 +46,16 @@ export default function CampaignPage({ params }: { params: { id: string } }) {
   const [videoTimer, setVideoTimer] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
     fetch(`${API_BASE}/campaigns/${params.id}`)
       .then((r) => {
         if (!r.ok) throw new Error(`Campaign not found (${r.status})`);
         return r.json();
       })
-      .then(setCampaign)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+      .then((data) => { if (!cancelled) setCampaign(data); })
+      .catch((e) => { if (!cancelled) setError(e.message); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [params.id]);
 
   // Elapsed timer while rendering
@@ -121,34 +123,6 @@ export default function CampaignPage({ params }: { params: { id: string } }) {
               )}
             </div>
 
-            <section className={styles.section}>
-              <h2 className={styles.sectionTitle}>Campaign Strategy</h2>
-              <p className={styles.sectionBody}>
-                {campaign.campaign_strategy || campaign.blueprint?.campaign_strategy || "—"}
-              </p>
-            </section>
-
-            {campaign.blueprint?.background?.prompt && (
-              <section className={styles.section}>
-                <h2 className={styles.sectionTitle}>Flux Background Prompt</h2>
-                <p className={styles.sectionBodyItalic}>{campaign.blueprint.background.prompt}</p>
-              </section>
-            )}
-
-            {layers.length > 0 && (
-              <section className={styles.section}>
-                <h2 className={styles.sectionTitle}>Design Elements ({layers.length} layers)</h2>
-                <div className={styles.layerList}>
-                  {layers.map((l) => (
-                    <div key={l.id} className={styles.layerRow}>
-                      <span className={styles.layerTag}>{l.type}</span>
-                      {l.content && <span className={styles.layerContent}>{l.content}</span>}
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
             {posters.length > 0 && (
               <section className={styles.section}>
                 <h2 className={styles.sectionTitle}>Generated Posters</h2>
@@ -156,6 +130,7 @@ export default function CampaignPage({ params }: { params: { id: string } }) {
                   {posters.map((p) => (
                     <div key={p.ar} className={styles.posterCard}>
                       <div className={p.cls}>
+                        <span className={styles.posterArBadge}>{p.ar}</span>
                         <Image
                           src={p.url!}
                           alt={p.label}
@@ -176,6 +151,34 @@ export default function CampaignPage({ params }: { params: { id: string } }) {
                           <Download size={14} />
                         </a>
                       </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <section className={styles.section}>
+              <h2 className={styles.sectionTitle}>Campaign Strategy</h2>
+              <p className={styles.sectionBody}>
+                {campaign.campaign_strategy || campaign.blueprint?.campaign_strategy || "—"}
+              </p>
+            </section>
+
+            {campaign.blueprint?.background?.prompt && (
+              <section className={styles.section}>
+                <h2 className={styles.sectionTitle}>Background</h2>
+                <p className={styles.sectionBodyItalic}>{campaign.blueprint.background.prompt}</p>
+              </section>
+            )}
+
+            {layers.length > 0 && (
+              <section className={styles.section}>
+                <h2 className={styles.sectionTitle}>Composition</h2>
+                <div className={styles.layerList}>
+                  {layers.map((l) => (
+                    <div key={l.id} className={styles.layerRow}>
+                      <span className={styles.layerTag}>{l.type}</span>
+                      {l.content && <span className={styles.layerContent}>{l.content}</span>}
                     </div>
                   ))}
                 </div>
@@ -204,7 +207,7 @@ export default function CampaignPage({ params }: { params: { id: string } }) {
 
               {(videoStep === "planning" || videoStep === "rendering") && (
                 <div className={styles.videoProgressCard}>
-                  <Loader2 size={28} className="animate-spin" style={{ color: "var(--color-primary)" }} />
+                  <Loader2 size={28} className={styles.spinIcon} />
                   <div className={styles.videoProgressText}>
                     {videoStep === "planning"
                       ? "AI Director writing motion prompt…"

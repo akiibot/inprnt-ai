@@ -15,9 +15,11 @@ export default function HomePage() {
   const [demoLoading, setDemoLoading] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     checkHealth()
-      .then(setHealth)
-      .catch(() => setHealthError(true));
+      .then((data) => { if (!cancelled) setHealth(data); })
+      .catch(() => { if (!cancelled) setHealthError(true); });
+    return () => { cancelled = true; };
   }, []);
 
   const handleTryDemo = async () => {
@@ -47,7 +49,8 @@ export default function HomePage() {
                 ? styles.statusOk
                 : styles.statusLoading
             }`}
-            title={healthError ? "Backend offline" : "Backend connected"}
+            aria-label={healthError ? "Backend offline" : health ? "Backend connected" : "Backend connecting"}
+            aria-live="polite"
           >
             <span className={styles.statusDot} />
             {healthError ? "Offline" : health ? "API Ready" : "Connecting…"}
@@ -89,21 +92,28 @@ export default function HomePage() {
           </button>
         </div>
 
-        <p className={`${styles.bnTagline} font-bn`}>
+        <p className={`${styles.bnTagline} font-bn`} lang="bn">
           আপনার ব্র্যান্ড, আমাদের AI — মুহূর্তেই পোস্টার।
         </p>
       </section>
 
-      <section className={styles.features}>
-        {features.map((f) => {
+      <section className={styles.features} aria-label="How it works">
+        {features.map((f, i) => {
           const Icon = f.icon;
           return (
-            <div key={f.title} className={styles.featureCard}>
-              <div className={styles.featureIcon}>
-                <Icon size={28} strokeWidth={1.5} aria-hidden="true" />
+            <div key={f.title} className={styles.featureRow}>
+              <div className={styles.featureIndex}>
+                <span className={styles.featureNum} aria-hidden="true">
+                  0{i + 1}
+                </span>
+                <span className={styles.featureIconWrap} aria-hidden="true">
+                  <Icon size={18} strokeWidth={1.5} />
+                </span>
               </div>
-              <h3 className={styles.featureTitle}>{f.title}</h3>
-              <p className={styles.featureDesc}>{f.desc}</p>
+              <div className={styles.featureBody}>
+                <h2 className={styles.featureTitle}>{f.title}</h2>
+                <p className={styles.featureDesc}>{f.desc}</p>
+              </div>
             </div>
           );
         })}

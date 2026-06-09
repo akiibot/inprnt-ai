@@ -72,12 +72,12 @@ export function EditorToolbar(props: Props) {
         <input ref={addImgRef} type="file" accept="image/*" style={{ display: "none" }}
           onChange={(e) => { const f = e.target.files?.[0]; if (f) onAddImage(f); e.target.value = ""; }} />
 
-        <div className={styles.shapeWrap}>
+        <div className={styles.shapeWrap} onMouseLeave={() => setShapeOpen(false)}>
           <button className={styles.btnAdd} onClick={() => setShapeOpen((v) => !v)} title="Add shape">
             <Square size={16} /><span>Shape</span>
           </button>
           {shapeOpen && (
-            <div className={styles.shapeMenu} onMouseLeave={() => setShapeOpen(false)}>
+            <div className={styles.shapeMenu}>
               <button onClick={() => { onAddShape("rect"); setShapeOpen(false); }}><Square size={14} /> Rectangle</button>
               <button onClick={() => { onAddShape("circle"); setShapeOpen(false); }}><Circle size={14} /> Circle</button>
               <button onClick={() => { onAddShape("line"); setShapeOpen(false); }}><Minus size={14} /> Line</button>

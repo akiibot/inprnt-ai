@@ -40,6 +40,14 @@ export function EditorLayersPanel({ objects, onSelect, onToggleVisible, onToggle
               key={o.id}
               className={`${styles.row} ${o.isSelected ? styles.selected : ""}`}
               onClick={() => !isBg && onSelect(o.id)}
+              tabIndex={isBg ? -1 : 0}
+              role="row"
+              aria-selected={o.isSelected}
+              onKeyDown={(e) => {
+                if (isBg) return;
+                if (e.key === "Enter") { e.preventDefault(); onSelect(o.id); }
+                if (e.key === "F2") { e.preventDefault(); setEditingId(o.id); setDraft(o.name); }
+              }}
             >
               <span className={styles.icon}>{typeIcon(o.type)}</span>
 

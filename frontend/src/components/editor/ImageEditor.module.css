@@ -30,7 +30,7 @@
 
 /* Fabric injects a .canvas-container wrapper div — target it instead of a JSX <canvas> */
 .canvasMount :global(.canvas-container) {
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 8px 40px rgba(255, 75, 0, 0.1);
 }
 
 .blueprintBadge {
@@ -75,6 +75,14 @@
   to { transform: rotate(360deg); }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+    border-top-color: var(--color-primary);
+    opacity: 0.6;
+  }
+}
+
 .draftBanner {
   position: absolute;
   bottom: var(--space-6);
@@ -92,7 +100,7 @@
   color: var(--color-white);
   white-space: nowrap;
   z-index: 20;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
 }
 
 .draftActions {

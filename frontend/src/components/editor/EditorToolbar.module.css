@@ -56,7 +56,7 @@
   color: var(--color-grey-400);
   font-size: 12px;
   cursor: pointer;
-  transition: var(--transition-fast);
+  transition: border-color var(--transition-fast), color var(--transition-fast);
 }
 
 .zoomLabel:hover {
@@ -92,13 +92,18 @@
   background: transparent;
   color: var(--color-grey-400);
   cursor: pointer;
-  transition: var(--transition-fast);
+  transition: border-color var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
 }
 
 .btn:hover:not(:disabled) {
   border-color: var(--color-border);
   color: var(--color-white);
   background: rgba(255, 255, 255, 0.06);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .btn:disabled {
@@ -118,7 +123,7 @@
   color: var(--color-grey-400);
   font-size: 13px;
   cursor: pointer;
-  transition: var(--transition-fast);
+  transition: border-color var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
   white-space: nowrap;
 }
 
@@ -126,6 +131,11 @@
   border-color: rgba(255, 255, 255, 0.2);
   color: var(--color-white);
   background: rgba(255, 255, 255, 0.06);
+}
+
+.btnAdd:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .btnPrimary {
@@ -141,7 +151,7 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: var(--transition-fast);
+  transition: background var(--transition-fast);
 }
 
 .btnPrimary:hover:not(:disabled) {
@@ -154,11 +164,13 @@
 }
 
 .btnSaved {
-  background: #22c55e;
+  background: #4ade80;
+  color: #080808;
 }
 
 .btnSaved:hover:not(:disabled) {
-  background: #16a34a;
+  background: #22c55e;
+  color: #080808;
 }
 
 .saveError {

@@ -70,8 +70,9 @@ export function EditorPropertiesPanel({
     return (
       <aside className={styles.panel}>
         <div className={styles.section}>
-          <span className={styles.sectionLabel}>Font</span>
+          <label htmlFor="prop-font" className={styles.sectionLabel}>Font</label>
           <select
+            id="prop-font"
             className={styles.select}
             value={activeText.fontFamily}
             onChange={(e) => onTextChange("fontFamily", e.target.value)}
@@ -83,8 +84,9 @@ export function EditorPropertiesPanel({
         </div>
 
         <div className={styles.section}>
-          <span className={styles.sectionLabel}>Size</span>
+          <label htmlFor="prop-size" className={styles.sectionLabel}>Size</label>
           <input
+            id="prop-size"
             type="number"
             min={6}
             max={400}
@@ -96,13 +98,15 @@ export function EditorPropertiesPanel({
 
         <div className={styles.section}>
           <span className={styles.sectionLabel}>Style</span>
-          <div className={styles.toggleGroup}>
+          <div className={styles.toggleGroup} role="group" aria-label="Font weight and style">
             {(["400", "600", "700"] as const).map((w) => (
               <button
                 key={w}
                 className={`${styles.toggleBtn} ${activeText.fontWeight === w ? styles.active : ""}`}
                 onClick={() => onTextChange("fontWeight", w)}
                 style={{ fontWeight: w }}
+                aria-pressed={activeText.fontWeight === w}
+                title={w === "400" ? "Regular" : w === "600" ? "Semibold" : "Bold"}
               >
                 {w === "400" ? "Reg" : w === "600" ? "Sem" : "Bold"}
               </button>
@@ -111,6 +115,8 @@ export function EditorPropertiesPanel({
               className={`${styles.toggleBtn} ${activeText.fontStyle === "italic" ? styles.active : ""}`}
               style={{ fontStyle: "italic" }}
               onClick={() => onTextChange("fontStyle", activeText.fontStyle === "italic" ? "normal" : "italic")}
+              aria-pressed={activeText.fontStyle === "italic"}
+              title="Italic"
             >
               I
             </button>
@@ -119,12 +125,14 @@ export function EditorPropertiesPanel({
 
         <div className={styles.section}>
           <span className={styles.sectionLabel}>Align</span>
-          <div className={styles.toggleGroup}>
+          <div className={styles.toggleGroup} role="group" aria-label="Text alignment">
             {(["left", "center", "right"] as const).map((a) => (
               <button
                 key={a}
                 className={`${styles.toggleBtn} ${activeText.textAlign === a ? styles.active : ""}`}
                 onClick={() => onTextChange("textAlign", a)}
+                aria-pressed={activeText.textAlign === a}
+                title={a === "left" ? "Align left" : a === "center" ? "Align center" : "Align right"}
               >
                 {a === "left" ? "L" : a === "center" ? "C" : "R"}
               </button>
