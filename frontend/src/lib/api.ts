@@ -14,6 +14,7 @@ import type {
   CampaignPlanResponse,
   CampaignGenerateResponse,
   GenerateAllResponse,
+  PosterEngine,
   ExportCampaignResponse,
   AspectRatio,
   ManualBrandPayload,
@@ -160,6 +161,7 @@ export async function runDemoGenerate(
   brandId: string,
   prompt: string,
   adherenceLevel: AdherenceLevel = "moderate",
+  engine: PosterEngine = "postergen",
 ): Promise<GenerateAllResponse> {
   return request<GenerateAllResponse>("/campaigns/generate-all", {
     method: "POST",
@@ -168,6 +170,7 @@ export async function runDemoGenerate(
       prompt,
       adherence_level: adherenceLevel,
       product_image_available: true,
+      engine,
     }),
   });
 }
@@ -212,10 +215,11 @@ export async function generateAllFormats(data: {
   prompt: string;
   adherence_level: string;
   product_image_available: boolean;
+  engine?: PosterEngine;
 }): Promise<GenerateAllResponse> {
   return directRequest<GenerateAllResponse>("/campaigns/generate-all", {
     method: "POST",
-    body: JSON.stringify(data),
+    body: JSON.stringify({ engine: "postergen", ...data }),
   });
 }
 

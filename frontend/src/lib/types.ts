@@ -52,6 +52,12 @@ export type PositionKeyword =
   | "bottom-left" | "bottom-center" | "bottom-right";
 export type AdherenceLevel = "strict" | "moderate" | "creative";
 export type AspectRatio = "1:1" | "9:16" | "16:9";
+/**
+ * Poster generation engine:
+ * - "postergen": Imagen renders the entire poster (text baked in). Default.
+ * - "blueprint": legacy Gemini-plan + HTML/Playwright (fully editable layers).
+ */
+export type PosterEngine = "postergen" | "blueprint";
 
 export interface BlueprintFormat {
   name: string;

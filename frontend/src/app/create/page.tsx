@@ -13,11 +13,10 @@ import styles from "./create.module.css";
 import { BrandLibrary } from "./BrandLibrary";
 import { CaptionPanel } from "./CaptionPanel";
 import {
-  uploadBrand, uploadProductImage, planCampaign,
-  generateCampaign, exportCampaignFormats,
-  loadDemoBrand, runDemoGenerate,
+  uploadBrand, uploadProductImage,
+  generateAllFormats, loadDemoBrand, runDemoGenerate,
 } from "@/lib/api";
-import type { AdherenceLevel, Blueprint, CampaignCaptions, ExportResult } from "@/lib/types";
+import type { AdherenceLevel, Blueprint, CampaignCaptions, ExportResult, PosterEngine } from "@/lib/types";
 
 type Step = "UPLOAD_BRAND" | "UPLOAD_PRODUCT" | "PROMPT" | "GENERATING" | "RESULTS";
 
@@ -94,6 +93,7 @@ function CreateCampaignInner() {
   const [productImage, setProductImage] = useState<File | null>(null);
   const [prompt, setPrompt] = useState("");
   const [adherenceLevel, setAdherenceLevel] = useState<AdherenceLevel>("moderate");
+  const [engine, setEngine] = useState<PosterEngine>("postergen");
   const [results, setResults] = useState<ExportResult[]>([]);
   const [lastBlueprint, setLastBlueprint] = useState<Blueprint | null>(null);
   const [captions, setCaptions] = useState<CampaignCaptions | null>(null);
@@ -175,7 +175,7 @@ function CreateCampaignInner() {
     try {
       addLog("Demo mode: loading Volt BD brand from mock data...");
       addLog("Calling campaigns/generate-all (serving cached demo posters)...");
-      const res = await runDemoGenerate(demoBrandId, prompt, adherenceLevel);
+      const res = await runDemoGenerate(demoBrandId, prompt, adherenceLevel, engine);
       if (abortRef.current) return;
       setCampaignId(res.campaign_id);
       const mapped: ExportResult[] = res.formats.map((f) => ({
@@ -217,57 +217,55 @@ function CreateCampaignInner() {
       let brandId = effectiveBrandId;
 
       if (!brandId) {
-        addLog("Phase 1/5: Uploading brand guidelines and logo...");
+        addLog("Phase 1/4: Uploading brand guidelines and logo...");
         const brandRes = await uploadBrand(brandPdf!, brandLogo!);
         if (abortRef.current) return;
         brandId = brandRes.brand_id;
         addLog(`✅ Brand extracted via Gemini: ${brandRes.brand.brand_name}`);
       } else if (urlBrandId) {
-        addLog("Phase 1/5: Using manually created brand profile...");
+        addLog("Phase 1/4: Using manually created brand profile...");
       } else {
-        addLog("Phase 1/5: Loading saved brand from library...");
+        addLog("Phase 1/4: Loading saved brand from library...");
       }
 
       if (productImage) {
-        addLog("Phase 2/5: Stripping background from product image via Remove.bg...");
+        addLog("Phase 2/4: Stripping background from product image via Remove.bg...");
         await uploadProductImage(brandId, productImage);
         if (abortRef.current) return;
         addLog("✅ Product background removed & saved.");
       } else {
-        addLog("Phase 2/5: Skipped (no product image).");
+        addLog("Phase 2/4: Skipped (no product image).");
       }
 
-      addLog(`Phase 3/5: Gemini designing blueprint [adherence: ${adherenceLevel}]...`);
-      const planRes = await planCampaign({
+      addLog(
+        engine === "postergen"
+          ? "Phase 3/4: Gemini brain is writing the Imagen poster prompt..."
+          : `Phase 3/4: Gemini designing editable blueprint [adherence: ${adherenceLevel}]...`,
+      );
+      addLog(
+        engine === "postergen"
+          ? "Phase 4/4: Imagen rendering all 3 formats + compositing logo/product..."
+          : "Phase 4/4: Generating backgrounds and rendering all 3 formats...",
+      );
+      const genRes = await generateAllFormats({
         brand_id: brandId,
         prompt,
         adherence_level: adherenceLevel,
         product_image_available: !!productImage,
-        format: { name: "1:1 Post", width: 1080, height: 1080, aspect_ratio: "1:1" },
+        engine,
       });
-      if (abortRef.current) return;
-      setLastBlueprint(planRes.blueprint);
-      addLog(`✅ Blueprint: "${planRes.blueprint.campaign_name}"`);
-
-      addLog("Phase 4/5: Generating Flux background and rendering poster...");
-      const genRes = await generateCampaign(planRes.blueprint);
       if (abortRef.current) return;
       setCampaignId(genRes.campaign_id);
       setCaptions(genRes.captions ?? null);
-      addLog("✅ 1:1 poster rendered.");
-
-      addLog("Phase 5/5: Rendering 9:16 and 16:9 formats...");
-      const exportRes = await exportCampaignFormats({
-        campaign_id: genRes.campaign_id,
-        formats: [
-          { name: "1:1 Post", width: 1080, height: 1080, aspect_ratio: "1:1" },
-          { name: "9:16 Story", width: 1080, height: 1920, aspect_ratio: "9:16" },
-          { name: "16:9 Cover", width: 1920, height: 1080, aspect_ratio: "16:9" },
-        ],
-      });
-      if (abortRef.current) return;
-      setResults(exportRes.exports);
-      addLog("✅ Pipeline complete!");
+      const mapped: ExportResult[] = genRes.formats.map((f) => ({
+        format_name: f.name,
+        url: f.poster_url,
+        width: f.aspect_ratio === "16:9" ? 1920 : 1080,
+        height: f.aspect_ratio === "9:16" ? 1920 : f.aspect_ratio === "16:9" ? 1080 : 1080,
+        aspect_ratio: f.aspect_ratio,
+      }));
+      setResults(mapped);
+      addLog(`✅ Pipeline complete in ${genRes.total_generation_time_seconds.toFixed(1)}s`);
       setCurrentStep("RESULTS");
     } catch (err: unknown) {
       if (!abortRef.current) {
@@ -491,6 +489,29 @@ function CreateCampaignInner() {
               </div>
 
               <div className={styles.inputGroup}>
+                <label className={styles.label}>Poster Engine</label>
+                <p className={styles.adherenceDescription}>
+                  How should the poster be rendered?
+                </p>
+                <div className={styles.adherenceToggle}>
+                  {(["postergen", "blueprint"] as const).map((eng) => (
+                    <button
+                      key={eng}
+                      className={`${styles.adherenceBtn} ${engine === eng ? styles.adherenceBtnActive : ""}`}
+                      onClick={() => setEngine(eng)}
+                    >
+                      {eng === "postergen" ? "AI Poster" : "Editable Layers"}
+                    </button>
+                  ))}
+                </div>
+                <p className={styles.adherenceHint}>
+                  {engine === "postergen"
+                    ? "Imagen renders the whole poster — richest, most designed look. Text is part of the image."
+                    : "Gemini plans editable text layers rendered over an AI background — fully editable, guaranteed-correct Bangla."}
+                </p>
+              </div>
+
+              <div className={styles.inputGroup}>
                 <label className={styles.label}>Creative Adherence</label>
                 <p className={styles.adherenceDescription}>
                   How closely should the AI follow your brand guidelines?
@@ -582,7 +603,9 @@ function CreateCampaignInner() {
                 <Check size={28} /> Campaign Generated!
               </h2>
               <p className={styles.stepDescription}>
-                Gemini designed the blueprint. Flux generated the background. Playwright rendered Bangla + English typography perfectly.
+                {engine === "postergen"
+                  ? "Gemini's brain wrote the prompt. Imagen rendered each format. Your real logo and product were composited on top."
+                  : "Gemini designed the blueprint. Imagen generated the background. Playwright rendered Bangla + English typography perfectly."}
               </p>
 
               <div className={styles.resultsGrid}>

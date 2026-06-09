@@ -35,6 +35,7 @@ from services.flux import generate_background
 from services.removebg import remove_background as strip_bg
 from compositor.template import build_html
 from compositor.renderer import render_poster_async
+from services.postergen import pipeline as pg_pipeline, brain as pg_brain
 
 _MOCK_DATA_DIR = Path(__file__).parent.parent / "mock-data"
 
@@ -283,6 +284,94 @@ async def _plan_and_render_format(
     }
 
 
+# ── PosterGen engine (default) ─────────────────────────────────────────────────
+
+def _derive_campaign_name(prompt: str) -> str:
+    """Cheap fallback campaign title from the brief — first few words, title-cased."""
+    words = prompt.strip().split()
+    snippet = " ".join(words[:6]) if words else "AI Poster Campaign"
+    return (snippet[:60] + "…") if len(snippet) > 60 else snippet
+
+
+async def _resolve_asset_to_path(url_or_path: Optional[str], dest: Path, loop) -> Optional[str]:
+    """Download a logo/product asset (Supabase URL or local path) to a temp file."""
+    if not url_or_path:
+        return None
+    data = await loop.run_in_executor(None, lambda: _read_image(url_or_path))
+    await loop.run_in_executor(None, lambda: dest.write_bytes(data))
+    return str(dest)
+
+
+async def _postergen_generate_all(
+    brand_data: dict,
+    request: "GenerateAllRequest",
+    campaign_id: str,
+    temp_dir: Path,
+) -> tuple:
+    """
+    Default engine: Gemini brain writes one Imagen prompt, Imagen renders the full
+    poster (text baked in) per format, PIL composites the real logo + product.
+    Returns (brain_output, results) where results is a list of per-format dicts.
+    """
+    loop = asyncio.get_running_loop()
+
+    # 1. Resolve logo (required) + product (optional) to local file paths.
+    logo_path = await _resolve_asset_to_path(brand_data.get("logo_url"), temp_dir / "logo.png", loop)
+    if not logo_path:
+        raise HTTPException(status_code=400, detail="Brand has no logo image; PosterGen requires a logo.")
+
+    product_path = None
+    product_url = brand_data.get("product_image_url")
+    if request.product_image_available and product_url:
+        try:
+            raw_bytes = await loop.run_in_executor(None, lambda: _read_image(product_url))
+            # Ensure a clean cutout for compositing. Uploaded products are already
+            # transparent (Remove.bg at upload), but demo/raw assets may have a
+            # studio background — strip it here when an API key is configured.
+            final_bytes = raw_bytes
+            if settings.REMOVEBG_API_KEY:
+                try:
+                    import mimetypes
+                    ct = mimetypes.guess_type(str(product_url))[0] or "image/png"
+                    final_bytes = await loop.run_in_executor(
+                        None, lambda: strip_bg(raw_bytes, ct)
+                    )
+                except Exception as e:
+                    print(f"Warning: PosterGen Remove.bg failed, using original: {e}")
+            ppath = temp_dir / "product.png"
+            await loop.run_in_executor(None, lambda: ppath.write_bytes(final_bytes))
+            product_path = str(ppath)
+        except Exception as e:
+            print(f"Warning: PosterGen product fetch failed: {e}")
+
+    # 2. Brain once (shared across all formats).
+    brain_output = await loop.run_in_executor(
+        None,
+        lambda: pg_pipeline.plan_campaign(brand_data, request.prompt, logo_path, product_path),
+    )
+
+    # 3. Render the 3 formats concurrently (Imagen + compositing run in executor).
+    async def _render_one(fmt: dict) -> dict:
+        start = time.time()
+        png = await loop.run_in_executor(
+            None,
+            lambda: pg_pipeline.render_format(
+                brain_output, fmt["aspect_ratio"], logo_path, product_path
+            ),
+        )
+        label = _ar_label(fmt["aspect_ratio"])
+        url = await loop.run_in_executor(
+            None,
+            lambda: upload_file_to_storage(
+                "campaigns", f"{campaign_id}/poster_{label}.png", png, "image/png"
+            ),
+        )
+        return {"fmt": fmt, "poster_url": url, "elapsed": time.time() - start}
+
+    results = await asyncio.gather(*[_render_one(fmt) for fmt in _ALL_FORMATS])
+    return brain_output, results
+
+
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.post("/campaigns/plan", response_model=CampaignPlanResponse)
@@ -371,6 +460,9 @@ class GenerateAllRequest(BaseModel):
     prompt: str
     adherence_level: Literal["strict", "moderate", "creative"] = "moderate"
     product_image_available: bool = False
+    # "postergen" — Imagen renders the full poster (default).
+    # "blueprint" — legacy Gemini-plan + HTML/Playwright engine (fully editable).
+    engine: Literal["postergen", "blueprint"] = "postergen"
 
 
 @router.post("/campaigns/generate-all")
@@ -394,6 +486,72 @@ async def generate_all_endpoint(request: GenerateAllRequest):
     temp_dir.mkdir(parents=True, exist_ok=True)
 
     try:
+        # ── Default engine: PosterGen (Imagen renders the full poster) ──────────
+        if request.engine == "postergen":
+            brain_output, pg_results = await _postergen_generate_all(
+                brand_data, request, campaign_id, temp_dir
+            )
+
+            formats_out = []
+            poster_urls: dict[str, str] = {}
+            total_elapsed = max(r["elapsed"] for r in pg_results)
+            for r in pg_results:
+                ar = r["fmt"]["aspect_ratio"]
+                poster_urls[ar] = r["poster_url"]
+                formats_out.append({
+                    "name": r["fmt"]["name"],
+                    "aspect_ratio": ar,
+                    "poster_url": r["poster_url"],
+                })
+
+            campaign_name = brain_output.campaign_name or _derive_campaign_name(request.prompt)
+            strategy = brain_output.campaign_strategy or request.prompt
+            voice = brand_data.get("voice") if isinstance(brand_data.get("voice"), dict) else {}
+            language = voice.get("language", "en")
+
+            # Lightweight record (NO layers) — the editor detects the absence of
+            # layers and falls back to overlay-on-flat-poster mode for this engine.
+            blueprint_record = {
+                "engine": "postergen",
+                "campaign_name": campaign_name,
+                "campaign_strategy": strategy,
+                "imagen_prompt": brain_output.imagen_prompt,
+                "logo_placement": brain_output.logo_placement,
+                "product_placement": brain_output.product_placement,
+                "product_size_ratio": brain_output.product_size_ratio,
+            }
+
+            db_payload = {
+                "id": campaign_id,
+                "brand_id": request.brand_id,
+                "campaign_name": campaign_name,
+                "campaign_strategy": strategy,
+                "adherence_level": request.adherence_level,
+                "language": language,
+                "blueprint": blueprint_record,
+                "poster_1x1_url": poster_urls.get("1:1"),
+                "poster_9x16_url": poster_urls.get("9:16"),
+                "poster_16x9_url": poster_urls.get("16:9"),
+                "background_url": None,
+                "generation_time_seconds": round(total_elapsed, 2),
+                "model_used": f"postergen/{pg_brain.PRIMARY_MODEL}",
+                "retry_count": 0,
+            }
+            if not settings.DEMO_FALLBACK_MODE:
+                get_supabase().table("campaigns").insert(db_payload).execute()
+
+            captions = generate_captions(
+                brand_data, {"campaign_name": campaign_name, "campaign_strategy": strategy}
+            )
+
+            return {
+                "campaign_id": campaign_id,
+                "formats": formats_out,
+                "captions": captions,
+                "total_generation_time_seconds": round(total_elapsed, 2),
+            }
+
+        # ── Legacy engine: blueprint + HTML/Playwright (fully editable) ─────────
         # All 3 formats planned + rendered in parallel — wall-clock time = longest single format
         results = await asyncio.gather(*[
             _plan_and_render_format(
