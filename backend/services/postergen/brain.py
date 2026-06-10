@@ -54,8 +54,16 @@ Rules for "imagen_prompt":
 - Honor the brand's "do_not_use" list as hard exclusions
 - IMPORTANT: The real product image will be composited on top after generation. Describe the background and scene composition for where the product will sit, but tell Imagen to show a generic placeholder or neutral shape in the product zone — do NOT describe the product in detail, as the actual product will be placed there programmatically.
 - Always instruct Imagen to leave a clean, empty rectangular area for the logo (e.g., "leave a clean rectangular zone in the bottom-left corner, approximately 15% of the poster width, for logo placement — this area must be completely clear of other visual elements")
-- Include the brand name and tagline as text elements in the poster
-- If language is "bengali" or "bilingual", include the Bengali script for the tagline/subtext (use tagline_bn when provided), spelled EXACTLY as given
+
+TEXT QUALITY RULES — follow every one of these precisely:
+- Include the brand name and tagline as baked-in text. Keep each text element to 4 words or fewer — Imagen renders short text far more accurately than long phrases. If the tagline is long, abbreviate to its punchiest 2-3 words.
+- ALWAYS write text in UPPERCASE in the imagen_prompt (e.g. "VOLT", "CHARGE UP"). Imagen renders uppercase Latin characters significantly more reliably than mixed case.
+- Repeat the exact text string at least 3 times in the prompt to reinforce accuracy, e.g.: "the text reads exactly 'VOLT' — the word V-O-L-T in large bold white letters — 'VOLT' is spelled V-O-L-T"
+- Spell out the brand name letter-by-letter in the prompt once (e.g. "V-O-L-T B-D") so Imagen locks onto the exact character sequence.
+- Place each text element on a solid, high-contrast background zone: e.g. "bold uppercase white letters on a solid deep navy rectangle", or "white text sits on a dark gradient band". Never float text over complex imagery with no backing.
+- Specify the exact hex color for text and its backing: e.g. "pure white (#FFFFFF) letters on a solid #0A0A2E rectangle".
+- After all text instructions, append: "All text must be crisp, sharp, perfectly legible, with clean edges — absolutely no blurring, distortion, garbling, or letter-order errors."
+- If language is "bengali" or "bilingual": you MAY attempt Bengali script for the tagline using tagline_bn spelled EXACTLY as given, but ALSO include the English uppercase version as a fallback text element. Place Bengali text on a solid-color background zone. Acknowledge that Bengali script rendering by Imagen may be imperfect.
 
 Rules for "logo_placement":
 - Must be one of: "bottom-left", "bottom-right", "top-left", "top-right", "center-bottom", "center-top"
