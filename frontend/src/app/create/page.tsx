@@ -129,6 +129,29 @@ function CreateCampaignInner() {
     return () => clearInterval(timer);
   }, [isProcessing]);
 
+  // Restore results when arriving back via browser Back from the campaign page.
+  // The "View Details" / "Generate Video" links set a '_resume_results' flag in
+  // sessionStorage before navigating; we consume it here on remount.
+  useEffect(() => {
+    if (isDemo || urlBrandId) return;
+    if (sessionStorage.getItem("_resume_results") !== "1") return;
+    sessionStorage.removeItem("_resume_results");
+    try {
+      const raw = sessionStorage.getItem("imprnt_results");
+      if (!raw) return;
+      const { campaignId: savedId, results: savedResults } = JSON.parse(raw) as {
+        campaignId: string;
+        results: ExportResult[];
+      };
+      if (savedId && savedResults?.length > 0) {
+        setCampaignId(savedId);
+        setResults(savedResults);
+        setCurrentStep("RESULTS");
+      }
+    } catch (_) { /* ignore malformed storage */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (!isDemo) return;
     const brandSlug = !demoParam || demoParam === "1" ? "volt-bd" : demoParam;
@@ -192,6 +215,9 @@ function CreateCampaignInner() {
       setResults(mapped);
       addLog(`✅ Demo complete in ${res.total_generation_time_seconds.toFixed(1)}s`);
       setCurrentStep("RESULTS");
+      try {
+        sessionStorage.setItem("imprnt_results", JSON.stringify({ campaignId: res.campaign_id, results: mapped }));
+      } catch (_) { /* storage unavailable */ }
     } catch (err: unknown) {
       if (!abortRef.current) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -271,6 +297,9 @@ function CreateCampaignInner() {
       setResults(mapped);
       addLog(`✅ Pipeline complete in ${genRes.total_generation_time_seconds.toFixed(1)}s`);
       setCurrentStep("RESULTS");
+      try {
+        sessionStorage.setItem("imprnt_results", JSON.stringify({ campaignId: genRes.campaign_id, results: mapped }));
+      } catch (_) { /* storage unavailable */ }
     } catch (err: unknown) {
       if (!abortRef.current) {
         const message = err instanceof Error ? err.message : String(err);
@@ -284,6 +313,7 @@ function CreateCampaignInner() {
   };
 
   const handleStartNew = () => {
+    try { sessionStorage.removeItem("imprnt_results"); sessionStorage.removeItem("_resume_results"); } catch (_) {}
     setResults([]);
     setLogs([]);
     setErrorMessage(null);
@@ -771,13 +801,22 @@ function CreateCampaignInner() {
               <div className={styles.actions} style={{ marginTop: "var(--space-10)" }}>
                 {campaignId && (
                   <>
-                    <Link href={`/campaign/${campaignId}`} className={styles.button}>
+                    <Link
+                      href={`/campaign/${campaignId}`}
+                      className={styles.button}
+                      onClick={() => {
+                        try { sessionStorage.setItem("_resume_results", "1"); } catch (_) {}
+                      }}
+                    >
                       View Details
                     </Link>
                     <Link
                       href={`/campaign/${campaignId}#video`}
                       className={styles.button}
                       style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-2)" }}
+                      onClick={() => {
+                        try { sessionStorage.setItem("_resume_results", "1"); } catch (_) {}
+                      }}
                     >
                       <Play size={16} />
                       Generate Video

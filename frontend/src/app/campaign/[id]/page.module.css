@@ -21,6 +21,10 @@
   text-decoration: none;
   margin-bottom: var(--space-8);
   transition: color var(--transition-fast);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
 }
 
 .backLink:hover {

@@ -789,8 +789,14 @@ async def generate_video_endpoint(campaign_id: str, body: GenerateVideoRequest):
 
     campaign = row.data[0]
 
-    # Resolve poster URL for this aspect ratio
-    poster_url = campaign.get(_POSTER_COLUMN.get(ar, "poster_1x1_url"))
+    # Map the requested AR to the actual Veo output AR (Veo doesn't support 1:1)
+    _VEO_AR_MAP = {"1:1": "9:16", "9:16": "9:16", "16:9": "16:9"}
+    veo_ar = _VEO_AR_MAP.get(ar, "9:16")
+
+    # Use the poster that matches the Veo output format as the first frame.
+    # If the user requested 1:1 but Veo will generate 9:16, use the 9:16 poster
+    # so there are no empty letterbox bands that Veo fills with hallucinated content.
+    poster_url = campaign.get(_POSTER_COLUMN.get(veo_ar)) or campaign.get(_POSTER_COLUMN.get(ar, "poster_1x1_url"))
     if not poster_url:
         raise HTTPException(
             status_code=400,
@@ -808,8 +814,7 @@ async def generate_video_endpoint(campaign_id: str, body: GenerateVideoRequest):
 
     # Patch aspect_ratio in the veo_plan to the Veo-mapped value
     veo_plan = dict(body.veo_plan)
-    _VEO_AR_MAP = {"1:1": "9:16", "9:16": "9:16", "16:9": "16:9"}
-    veo_plan["aspect_ratio"] = _VEO_AR_MAP.get(ar, "9:16")
+    veo_plan["aspect_ratio"] = veo_ar
 
     try:
         video_url, elapsed = await generate_and_upload_veo_video(

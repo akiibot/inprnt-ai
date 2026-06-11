@@ -126,17 +126,37 @@ def composite_product(
     product = Image.open(product_path).convert("RGBA")
     product = _remove_background(product)
 
+    # Resolve anchor fractions FIRST so we can compute a placement-aware size cap.
+    cx_frac, cy_frac = _PRODUCT_ANCHOR.get(placement, (0.50, 0.50))
+
     # Scale so product height = size_ratio * poster height
     target_h = int(h * max(0.2, min(size_ratio, 0.85)))
     scale = target_h / product.height
-    product = product.resize((int(product.width * scale), target_h), Image.LANCZOS)
+    new_w = int(product.width * scale)
+    new_h = target_h
+
+    # Cap width so the product fits within the poster when centred at cx_frac.
+    # For an anchor near an edge (e.g. "right-center" at 72%), the available
+    # half-width on the tight side is only 28% of w, so the full width must be
+    # ≤ 2 × 28% = 56% of w — otherwise the product gets clipped at the edge.
+    # A small inset margin (4%) keeps the product visually clear of the border.
+    MARGIN = 0.04
+    placement_max_w = int(2 * min(cx_frac - MARGIN, 1.0 - cx_frac - MARGIN) * w)
+    global_max_w    = int(w * 0.80)
+    max_w = max(int(w * 0.20), min(placement_max_w, global_max_w))
+
+    if new_w > max_w:
+        scale = max_w / product.width
+        new_w = max_w
+        new_h = int(product.height * scale)
+
+    product = product.resize((new_w, new_h), Image.LANCZOS)
 
     # Add drop shadow
     product_with_shadow, (shadow_pad, _) = _add_drop_shadow(product)
     pw, ph = product_with_shadow.size
 
     # Centre the composited image on the anchor point
-    cx_frac, cy_frac = _PRODUCT_ANCHOR.get(placement, (0.50, 0.50))
     cx = int(w * cx_frac)
     cy = int(h * cy_frac)
     paste_x = cx - pw // 2 + shadow_pad  # align real product centre, not shadow

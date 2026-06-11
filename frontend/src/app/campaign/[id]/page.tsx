@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link";
 import { Download, ArrowLeft, Video, Loader2, Play, Check } from "lucide-react";
 import styles from "./page.module.css";
 import { planCampaignVideo, generateCampaignVideo } from "@/lib/api";
@@ -33,6 +33,7 @@ type VideoStep = "idle" | "planning" | "rendering" | "done" | "error";
 const API_BASE = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api`;
 
 export default function CampaignPage({ params }: { params: { id: string } }) {
+  const router = useRouter();
   const [campaign, setCampaign] = useState<CampaignData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -102,10 +103,10 @@ export default function CampaignPage({ params }: { params: { id: string } }) {
   return (
     <main className={styles.page}>
       <div className={styles.inner}>
-        <Link href="/" className={styles.backLink}>
+        <button onClick={() => router.back()} className={styles.backLink}>
           <ArrowLeft size={14} />
-          Back to home
-        </Link>
+          Back
+        </button>
 
         {loading && <p className={styles.stateText}>Loading campaign…</p>}
         {error && <p className={styles.errorText}>{error}</p>}
