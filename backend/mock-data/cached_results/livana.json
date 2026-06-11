@@ -4,9 +4,9 @@
   "campaign_name": "Livana Eid Refresh Campaign",
   "prompt": "Design an Eid Refresh campaign for LIVANA. Celebrate Eid with a fresh skin glow — position Livana as the go-to beauty bar for the festive season. Feature the Livana soap bar as the hero (40–60% of layout) on a sage green and neutral botanical canvas. Bilingual layout: Hind Siliguri Bengali headline as the lead, Inclusive Sans English sub-label. Reference the three core active ingredients: Aloe Vera, Vitamin E, and Sandalwood. Include a 30% Eid offer badge styled with pill-shaped CTA. Bengali headline: 'ঈদের সতেজতা, LIVANA-এর সাথে।' English sub-copy: 'Crafted for Bangladeshi skin. Every day, every wash.' Tone: fresh, celebratory, science-backed, radically accessible.",
   "posters": {
-    "1:1":  "https://ovjtwqjutffsgmxxkdpz.supabase.co/storage/v1/object/public/campaigns/00d09a8a-5347-4e2f-811e-8d2ef66890be/poster_1x1.png",
-    "9:16": "https://ovjtwqjutffsgmxxkdpz.supabase.co/storage/v1/object/public/campaigns/00d09a8a-5347-4e2f-811e-8d2ef66890be/poster_9x16.png",
-    "16:9": "https://ovjtwqjutffsgmxxkdpz.supabase.co/storage/v1/object/public/campaigns/00d09a8a-5347-4e2f-811e-8d2ef66890be/poster_16x9.png"
+    "1:1":  "https://ovjtwqjutffsgmxxkdpz.supabase.co/storage/v1/object/public/campaigns/demo/livana/poster_1x1.png",
+    "9:16": "https://ovjtwqjutffsgmxxkdpz.supabase.co/storage/v1/object/public/campaigns/demo/livana/poster_9x16.png",
+    "16:9": "https://ovjtwqjutffsgmxxkdpz.supabase.co/storage/v1/object/public/campaigns/demo/livana/poster_16x9.png"
   },
   "captions": {
     "instagram": "Eid refresh vibes! ✨ Get that glow with LIVANA. 30% off to celebrate! 💖",
@@ -16,7 +16,7 @@
     "hashtags": ["#LIVANA", "#LIVANAEidRefresh", "#EidGlow", "#SkincareBD", "#BangladeshiSkin"]
   },
   "video": {
-    "url": "https://ovjtwqjutffsgmxxkdpz.supabase.co/storage/v1/object/public/campaigns/00d09a8a-5347-4e2f-811e-8d2ef66890be/video_9x16.mp4",
+    "url": "https://ovjtwqjutffsgmxxkdpz.supabase.co/storage/v1/object/public/campaigns/demo/livana/video_9x16.mp4",
     "veo_plan": {
       "motion_prompt": "Slow graceful pan across the Livana soap bar on a neutral surface with botanical leaf motifs. Sage green color wash frames the product. Close-up reveal of paper wrap texture. Hind Siliguri text fades in: 'ঈদের সতেজতা।' Camera pulls back to show Aloe Vera, Vitamin E capsule, and sandalwood icons appearing around the product. Flat, clean aesthetic — no heavy shadows.",
       "audio_prompt": null,

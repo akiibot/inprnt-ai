@@ -1,12 +1,12 @@
 {
-  "_note": "Placeholder — populate poster/video URLs after assets are uploaded to Supabase.",
+  "_note": "Populated 2026-06-11. Connect Beyond flagship launch campaign.",
   "brand_id": "aether-demo-001",
   "campaign_name": "Aether Mobile — Connect Beyond Launch",
-  "prompt": "Design a flagship smartphone launch campaign for Aether Mobile — Bangladesh's premier technology brand. The smartphone product render must occupy at least 50% of the canvas as the undisputed hero. Primary background: Horizon Navy (#0A192F). Use Aether Breeze (#64FFDA) strictly for headline text, logo accents, and interactive highlights. Titanium White (#F8F9FA) for body copy. Slate Gray (#8892B0) for tech specs and dividers. Typography: Lora Bold for all English headlines and body, Hind Siliguri for all Bengali copy. Maximum 3 tech specifications visible. No clutter — one device, one message, one action. No neon gradients, no aggressive sale bursts, no fonts outside Lora or Hind Siliguri. Campaign headline (Lora Bold, Aether Breeze): 'Capture the Unseen.' Bengali sub-headline (Hind Siliguri): 'তোমার দুনিয়া, সীমাহীন।' Sub-copy (Titanium White): 'Aether Mobile — Connect Beyond.' Tone: intelligent, elevated, proudly Bangladeshi.",
+  "prompt": "Design a flagship smartphone launch campaign for Aether Mobile — Bangladesh's premier technology brand. The smartphone product render must occupy at least 50% of the canvas as the undisputed hero. Primary background: Horizon Navy (#0A192F). Use Aether Breeze (#64FFDA) strictly for headline text, logo accents, and interactive highlights. Titanium White (#F8F9FA) for body copy. Slate Gray (#8892B0) for tech specs and dividers. Typography: Lora Bold for all English headlines and body, Hind Siliguri for all Bengali copy. Maximum 3 tech specifications visible. No clutter — one device, one message, one action. Campaign headline (Lora Bold, Aether Breeze): 'Capture the Unseen.' Bengali sub-headline (Hind Siliguri): 'তোমার দুনিয়া, সীমাহীন।' Sub-copy (Titanium White): 'Aether Mobile — Connect Beyond.' Tone: intelligent, elevated, proudly Bangladeshi.",
   "posters": {
-    "1:1":  "",
-    "9:16": "",
-    "16:9": ""
+    "1:1":  "https://ovjtwqjutffsgmxxkdpz.supabase.co/storage/v1/object/public/campaigns/demo/aether/poster_1x1.png",
+    "9:16": "https://ovjtwqjutffsgmxxkdpz.supabase.co/storage/v1/object/public/campaigns/demo/aether/poster_9x16.png",
+    "16:9": "https://ovjtwqjutffsgmxxkdpz.supabase.co/storage/v1/object/public/campaigns/demo/aether/poster_16x9.png"
   },
   "captions": {
     "instagram": "One device. One message. Connect Beyond. 📱⚡ Aether Mobile — Bangladesh's finest flagship. #AetherMobile #ConnectBeyond",
@@ -16,7 +16,7 @@
     "hashtags": ["#AetherMobile", "#ConnectBeyond", "#BangladeshTech", "#SmartphoneBD", "#সংযোগেরবাইরে"]
   },
   "video": {
-    "url": "",
+    "url": "https://ovjtwqjutffsgmxxkdpz.supabase.co/storage/v1/object/public/campaigns/demo/aether/video_9x16.mp4",
     "veo_plan": {
       "motion_prompt": "A sleek smartphone emerges from deep Horizon Navy darkness, illuminated by a thin Aether Breeze (#64FFDA) beam. Camera orbits the device slowly, revealing the premium back-glass detail. Soft realistic drop shadow grounds the device. Lora headline fades in: 'Capture the Unseen.' Hind Siliguri sub-text: 'তোমার দুনিয়া, সীমাহীন।' Minimal breathing room — no particle effects, no clutter. Ultra-clean, cinematic.",
       "audio_prompt": null,
