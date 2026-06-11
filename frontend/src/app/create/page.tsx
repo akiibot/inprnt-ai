@@ -154,7 +154,7 @@ function CreateCampaignInner() {
         setResults(savedResults);
         setCurrentStep("RESULTS");
       }
-    } catch (_) { /* ignore malformed storage */ }
+    } catch { /* ignore malformed storage */ }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -253,7 +253,7 @@ function CreateCampaignInner() {
       setCurrentStep("RESULTS");
       try {
         sessionStorage.setItem("imprnt_results", JSON.stringify({ campaignId: res.campaign_id, results: mapped }));
-      } catch (_) { /* storage unavailable */ }
+      } catch { /* storage unavailable */ }
     } catch (err: unknown) {
       if (!abortRef.current) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -360,7 +360,7 @@ function CreateCampaignInner() {
       setCurrentStep("RESULTS");
       try {
         sessionStorage.setItem("imprnt_results", JSON.stringify({ campaignId: genRes.campaign_id, results: mapped }));
-      } catch (_) { /* storage unavailable */ }
+      } catch { /* storage unavailable */ }
     } catch (err: unknown) {
       if (!abortRef.current) {
         const message = err instanceof Error ? err.message : String(err);
@@ -374,7 +374,7 @@ function CreateCampaignInner() {
   };
 
   const handleStartNew = () => {
-    try { sessionStorage.removeItem("imprnt_results"); sessionStorage.removeItem("_resume_results"); } catch (_) {}
+    try { sessionStorage.removeItem("imprnt_results"); sessionStorage.removeItem("_resume_results"); } catch {}
     setResults([]);
     setLogs([]);
     setErrorMessage(null);
@@ -989,7 +989,7 @@ function CreateCampaignInner() {
                       href={`/campaign/${campaignId}`}
                       className={styles.button}
                       onClick={() => {
-                        try { sessionStorage.setItem("_resume_results", "1"); } catch (_) {}
+                        try { sessionStorage.setItem("_resume_results", "1"); } catch {}
                       }}
                     >
                       View Details
@@ -999,7 +999,7 @@ function CreateCampaignInner() {
                       className={styles.button}
                       style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-2)" }}
                       onClick={() => {
-                        try { sessionStorage.setItem("_resume_results", "1"); } catch (_) {}
+                        try { sessionStorage.setItem("_resume_results", "1"); } catch {}
                       }}
                     >
                       <Play size={16} />
