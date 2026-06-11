@@ -16,7 +16,7 @@ import {
   uploadBrand, uploadProductImage,
   generateAllFormats, loadDemoBrand, runDemoGenerate,
 } from "@/lib/api";
-import type { AdherenceLevel, Blueprint, CampaignCaptions, ExportResult, PosterEngine } from "@/lib/types";
+import type { AdherenceLevel, Blueprint, Brand, CampaignCaptions, ExportResult, PosterEngine } from "@/lib/types";
 
 type Step = "UPLOAD_BRAND" | "UPLOAD_PRODUCT" | "PROMPT" | "GENERATING" | "RESULTS";
 
@@ -76,7 +76,8 @@ function UploadZone({
 
 function CreateCampaignInner() {
   const searchParams = useSearchParams();
-  const isDemo = searchParams.get("demo") === "1";
+  const demoParam = searchParams.get("demo"); // "1" | "livana" | "aether" | "volt-bd" | null
+  const isDemo = !!demoParam;
   const urlBrandId = searchParams.get("brand_id");
 
   const [currentStep, setCurrentStep] = useState<Step>(urlBrandId ? "PROMPT" : "UPLOAD_BRAND");
@@ -85,6 +86,7 @@ function CreateCampaignInner() {
   const [logs, setLogs] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [demoBrandId, setDemoBrandId] = useState<string | null>(null);
+  const [demoBrand, setDemoBrand] = useState<Brand | null>(null);
   const [demoLoadError, setDemoLoadError] = useState<string | null>(null);
   const [campaignId, setCampaignId] = useState<string | null>(null);
 
@@ -129,11 +131,13 @@ function CreateCampaignInner() {
 
   useEffect(() => {
     if (!isDemo) return;
-    loadDemoBrand()
-      .then(({ brand_id, prompt: demoPrompt }) => {
+    const brandSlug = !demoParam || demoParam === "1" ? "volt-bd" : demoParam;
+    loadDemoBrand(brandSlug)
+      .then(({ brand_id, brand, prompt: demoPrompt }) => {
         setDemoBrandId(brand_id);
+        setDemoBrand(brand);
         setPrompt(demoPrompt);
-        setCurrentStep("PROMPT");
+        // Stay on UPLOAD_BRAND — let user walk through all steps
       })
       .catch((err) => setDemoLoadError(String(err)));
   }, [isDemo]);
@@ -173,7 +177,7 @@ function CreateCampaignInner() {
     setLogs([]);
     setResults([]);
     try {
-      addLog("Demo mode: loading Volt BD brand from mock data...");
+      addLog(`Demo mode: loading ${demoBrand?.brand_name ?? demoBrandId} brand from mock data...`);
       addLog("Calling campaigns/generate-all (serving cached demo posters)...");
       const res = await runDemoGenerate(demoBrandId, prompt, adherenceLevel, engine);
       if (abortRef.current) return;
@@ -287,7 +291,7 @@ function CreateCampaignInner() {
     setCaptions(null);
     setLibraryBrandId(null);
     if (isDemo) {
-      setCurrentStep("PROMPT");
+      setCurrentStep("UPLOAD_BRAND");
     } else {
       setCurrentStep("UPLOAD_BRAND");
       setBrandPdf(null);
@@ -327,10 +331,12 @@ function CreateCampaignInner() {
       </nav>
 
       <header className={styles.header}>
-        <h1 className={styles.title}>{isDemo ? "Volt BD Demo" : "New Campaign"}</h1>
+        <h1 className={styles.title}>
+          {isDemo ? `${demoBrand?.brand_name ?? "Demo"} Demo` : "New Campaign"}
+        </h1>
         <p className={styles.subtitle}>
           {isDemo
-            ? "Pre-loaded Volt BD Eid campaign — no upload needed."
+            ? `Pre-loaded ${demoBrand?.brand_name ?? "demo"} campaign — results served instantly.`
             : "AI-powered creative direction and execution."}
         </p>
       </header>
@@ -364,7 +370,41 @@ function CreateCampaignInner() {
           transition={{ duration: 0.3 }}
           className={styles.content}
         >
-          {currentStep === "UPLOAD_BRAND" && (
+          {currentStep === "UPLOAD_BRAND" && isDemo && (
+            <div>
+              <h2 className={styles.cardTitle}>1. Brand Identity</h2>
+              <p className={styles.stepDescription}>
+                This demo uses a pre-loaded brand profile — no PDF upload required.
+              </p>
+              {demoBrand ? (
+                <div className={styles.demoBrandCard}>
+                  <div
+                    className={styles.demoBrandCardAccent}
+                    style={{ background: demoBrand.colors.primary }}
+                  />
+                  <div className={styles.demoBrandCardInfo}>
+                    <div className={styles.demoBrandCardName}>{demoBrand.brand_name}</div>
+                    <div className={styles.demoBrandCardTagline}>{demoBrand.tagline}</div>
+                    <div className={styles.demoBrandCardIndustry}>{demoBrand.industry}</div>
+                  </div>
+                  <span className={styles.demoReadyBadge}>Pre-loaded</span>
+                </div>
+              ) : (
+                <div className={styles.stepDescription}>Loading demo brand…</div>
+              )}
+              <div className={styles.actions}>
+                <button
+                  className={`${styles.button} ${styles.buttonPrimary}`}
+                  onClick={() => setCurrentStep("UPLOAD_PRODUCT")}
+                  disabled={!demoBrand}
+                >
+                  Next Step <ChevronRight size={18} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {currentStep === "UPLOAD_BRAND" && !isDemo && (
             <div>
               <h2 className={styles.cardTitle}>1. Brand Identity</h2>
 
@@ -447,7 +487,40 @@ function CreateCampaignInner() {
             </div>
           )}
 
-          {currentStep === "UPLOAD_PRODUCT" && (
+          {currentStep === "UPLOAD_PRODUCT" && isDemo && (
+            <div>
+              <h2 className={styles.cardTitle}>
+                2. Product Focus <span className={styles.optionalTag}>Demo</span>
+              </h2>
+              <p className={styles.stepDescription}>
+                This demo uses a pre-loaded product image — background already removed.
+              </p>
+              <div className={styles.demoBrandCard}>
+                <div
+                  className={styles.demoBrandCardAccent}
+                  style={{ background: demoBrand?.colors.primary ?? "var(--color-primary)" }}
+                />
+                <div className={styles.demoBrandCardInfo}>
+                  <div className={styles.demoBrandCardName}>Product image ready</div>
+                  <div className={styles.demoBrandCardTagline}>
+                    Pre-loaded for {demoBrand?.brand_name ?? "this demo brand"}
+                  </div>
+                </div>
+                <span className={styles.demoReadyBadge}>Pre-loaded</span>
+              </div>
+              <div className={styles.actions}>
+                <button className={styles.button} onClick={() => setCurrentStep("UPLOAD_BRAND")}>Back</button>
+                <button
+                  className={`${styles.button} ${styles.buttonPrimary}`}
+                  onClick={() => setCurrentStep("PROMPT")}
+                >
+                  Next Step <ChevronRight size={18} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {currentStep === "UPLOAD_PRODUCT" && !isDemo && (
             <div>
               <h2 className={styles.cardTitle}>
                 2. Product Focus <span className={styles.optionalTag}>Optional</span>

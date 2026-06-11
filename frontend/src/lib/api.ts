@@ -140,8 +140,11 @@ export async function renameBrand(
   });
 }
 
-export async function loadDemoBrand(): Promise<{ brand_id: string; brand: Brand; prompt: string }> {
-  return request("/brands/load-demo", { method: "POST" });
+export async function loadDemoBrand(brand = "volt-bd"): Promise<{ brand_id: string; brand: Brand; prompt: string }> {
+  return request("/brands/load-demo", {
+    method: "POST",
+    body: JSON.stringify({ brand }),
+  });
 }
 
 export async function submitManualBrand(

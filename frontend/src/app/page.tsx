@@ -2,17 +2,20 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Brain, Palette, LayoutGrid, ChevronRight } from "lucide-react";
 import { checkHealth } from "@/lib/api";
 import type { HealthResponse } from "@/lib/types";
 import styles from "./page.module.css";
 
+const DEMO_BRANDS = [
+  { slug: "livana",     name: "Livana",        color: "#32774A" },
+  { slug: "volt-bd",    name: "Volt BD",        color: "#FF4B00" },
+  { slug: "aether",     name: "Aether Mobile",  color: "#64FFDA" },
+];
+
 export default function HomePage() {
-  const router = useRouter();
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [healthError, setHealthError] = useState(false);
-  const [demoLoading, setDemoLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -21,15 +24,6 @@ export default function HomePage() {
       .catch(() => { if (!cancelled) setHealthError(true); });
     return () => { cancelled = true; };
   }, []);
-
-  const handleTryDemo = async () => {
-    setDemoLoading(true);
-    try {
-      router.push("/create?demo=1");
-    } finally {
-      setDemoLoading(false);
-    }
-  };
 
   return (
     <main className={styles.main}>
@@ -82,14 +76,18 @@ export default function HomePage() {
             Start Creating
             <ChevronRight size={18} aria-hidden="true" />
           </Link>
-          <button
-            className={styles.ctaDemo}
-            onClick={handleTryDemo}
-            disabled={demoLoading}
-          >
-            {demoLoading ? "Loading…" : "Try Volt BD Demo"}
-            <ChevronRight size={16} aria-hidden="true" />
-          </button>
+        </div>
+
+        <div className={styles.demoSection}>
+          <span className={styles.demoSectionLabel}>or try a demo brand</span>
+          <div className={styles.demoBrandRow}>
+            {DEMO_BRANDS.map((b) => (
+              <Link key={b.slug} href={`/create?demo=${b.slug}`} className={styles.demoBrandBtn}>
+                <span className={styles.demoBrandDot} style={{ background: b.color }} />
+                {b.name}
+              </Link>
+            ))}
+          </div>
         </div>
 
         <p className={`${styles.bnTagline} font-bn`} lang="bn">

@@ -26,6 +26,8 @@ from services.supabase_client import (
     upload_file_to_storage, save_brand, get_brand, supabase, get_supabase,
     _load_demo_brand, _MOCK_DATA_DIR,
     list_brands as _list_brands, delete_brand as _delete_brand, rename_brand as _rename_brand,
+    detect_demo_brand_by_filename, detect_demo_brand_by_name,
+    is_demo_brand, load_demo_brand_data, load_cached_results, load_demo_prompt,
 )
 
 _DEMO_EID_PROMPT = (
@@ -37,6 +39,18 @@ _DEMO_EID_PROMPT = (
 )
 
 router = APIRouter(tags=["Brands"])
+
+
+def _build_demo_upload_response(brand_id: str) -> BrandUploadResponse:
+    """Return a preloaded BrandUploadResponse for a known demo brand."""
+    brand_data = load_demo_brand_data(brand_id)
+    brand = Brand(**{**brand_data, "brand_id": brand_data["id"]})
+    return BrandUploadResponse(
+        brand_id=brand_id,
+        brand=brand,
+        colors_source="demo-preloaded",
+        message=f"Demo brand detected — serving preloaded profile ({brand.brand_name})",
+    )
 
 
 @router.get("/brands")
@@ -78,14 +92,19 @@ async def upload_brand_files(
     """
     if not pdf.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Document must be a PDF")
-    
+
+    # ── Demo short-circuit: filename detection ────────────────────────────────
+    demo_brand_id = detect_demo_brand_by_filename(pdf.filename or "", logo.filename or "")
+    if demo_brand_id:
+        return _build_demo_upload_response(demo_brand_id)
+
     # Read files
     try:
         pdf_bytes = await pdf.read()
         logo_bytes = await logo.read()
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to read uploaded files: {e}")
-        
+
     # 1. Parse PDF text
     try:
         pdf_text = ""
@@ -110,7 +129,12 @@ async def upload_brand_files(
          brand_dict, model_used = extract_brand(pdf_text, logo.content_type, logo_bytes)
     except Exception as e:
          raise HTTPException(status_code=500, detail=f"AI extraction failed: {e}")
-         
+
+    # ── Demo short-circuit: extracted brand name detection ────────────────────
+    demo_brand_id = detect_demo_brand_by_name(brand_dict.get("brand_name", ""))
+    if demo_brand_id:
+        return _build_demo_upload_response(demo_brand_id)
+
     # 4. Merge Colors (ColorThief overwrites Gemini's guesses)
     brand_dict['colors'] = extracted_colors
     
@@ -184,29 +208,46 @@ async def get_brand_endpoint(brand_id: str):
         raise HTTPException(status_code=500, detail=f"Failed to parse database record: {e}")
 
 
+class LoadDemoRequest(BaseModel):
+    brand: str = "volt-bd"  # "volt-bd" | "livana" | "aether"
+
+
+_DEMO_SLUG_TO_ID = {
+    "volt-bd": "volt-bd-demo-001",
+    "livana":  "livana-demo-001",
+    "aether":  "aether-demo-001",
+}
+
+
 @router.post("/brands/load-demo")
-async def load_demo_brand():
+async def load_demo_brand(body: LoadDemoRequest = LoadDemoRequest()):
     """
-    Load the Volt BD demo brand from mock-data without requiring PDF/logo upload.
-    Returns brand_id + the Eid campaign prompt so the frontend can skip the wizard.
+    Load a demo brand from mock-data without requiring PDF/logo upload.
+    Returns brand_id + a pre-set campaign prompt so the frontend can skip the wizard.
+    Accepts optional 'brand' field: "volt-bd" (default), "livana", or "aether".
     """
-    brand_data = _load_demo_brand()
+    brand_id = _DEMO_SLUG_TO_ID.get(body.brand, "volt-bd-demo-001")
+    brand_data = load_demo_brand_data(brand_id)
     try:
-        brand = Brand(**{**brand_data, "brand_id": brand_data.get("id", "volt-bd-demo-001")})
+        brand = Brand(**{**brand_data, "brand_id": brand_data.get("id", brand_id)})
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Demo brand schema error: {e}")
 
-    # Load the pre-set Eid prompt from cached_posters.json if available
-    try:
-        cached_path = _MOCK_DATA_DIR / "cached_posters.json"
-        prompt = _DEMO_EID_PROMPT
-        if cached_path.exists():
-            cached = json.loads(cached_path.read_text(encoding="utf-8"))
-            prompt = cached.get("prompt", _DEMO_EID_PROMPT)
-    except Exception:
-        prompt = _DEMO_EID_PROMPT
+    # Load prompt from cached_results/{slug}.json (always available even before posters are ready)
+    prompt = load_demo_prompt(brand_id)
+    if not prompt and brand_id == "volt-bd-demo-001":
+        # Fall back to legacy cached_posters.json then hardcoded constant for Volt BD
+        try:
+            cached_path = _MOCK_DATA_DIR / "cached_posters.json"
+            if cached_path.exists():
+                legacy = json.loads(cached_path.read_text(encoding="utf-8"))
+                prompt = legacy.get("prompt", _DEMO_EID_PROMPT)
+        except Exception:
+            pass
+        if not prompt:
+            prompt = _DEMO_EID_PROMPT
 
-    return {"brand_id": "volt-bd-demo-001", "brand": brand, "prompt": prompt}
+    return {"brand_id": brand_id, "brand": brand, "prompt": prompt}
 
 
 class ManualBrandRequest(BaseModel):
@@ -304,6 +345,14 @@ async def upload_product_image(
     Uploads a product image, strips the background using Remove.bg,
     saves the transparent PNG to Supabase Storage, and updates the Brand record.
     """
+    # ── Demo short-circuit: accept upload silently, return preloaded product URL ─
+    if is_demo_brand(brand_id):
+        return {
+            "message": "Product image noted (demo brand — using preloaded results)",
+            "product_image_url": load_demo_brand_data(brand_id).get("product_image_url") or "",
+            "background_removed": False,
+        }
+
     # 1. Verify Brand Exists
     brand_data = get_brand(brand_id)
     if not brand_data:

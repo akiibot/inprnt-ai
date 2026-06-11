@@ -594,6 +594,66 @@
   max-width: 320px;
 }
 
+/* ── Demo brand info card (shown at upload steps in demo mode) ── */
+.demoBrandCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-5) var(--space-6);
+  margin-bottom: var(--space-6);
+}
+
+.demoBrandCardAccent {
+  width: 4px;
+  min-height: 52px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  align-self: stretch;
+}
+
+.demoBrandCardInfo {
+  flex: 1;
+}
+
+.demoBrandCardName {
+  font-family: var(--font-heading-en);
+  font-size: 1.125rem;
+  color: var(--color-white);
+  margin-bottom: var(--space-1);
+  letter-spacing: 0.02em;
+}
+
+.demoBrandCardTagline {
+  font-size: 0.875rem;
+  color: var(--color-grey-400);
+  margin-bottom: var(--space-1);
+  font-style: italic;
+}
+
+.demoBrandCardIndustry {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-grey-600);
+}
+
+.demoReadyBadge {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.08);
+  border: 1px solid rgba(74, 222, 128, 0.2);
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
 /* ── Error state ── */
 .errorState {
   color: #f87171;

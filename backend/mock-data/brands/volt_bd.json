@@ -1,0 +1,30 @@
+{
+  "brand_id": "volt-bd-demo-001",
+  "brand_name": "Volt BD",
+  "tagline": "Stay Focused. Recharge.",
+  "tagline_bn": "মনোযোগ রাখো। রিচার্জ হও।",
+  "industry": "Beverages / Energy Drink",
+  "target_audience": "Young adults 18-30, urban Bangladesh",
+  "brand_personality": ["Bold", "Energetic", "Youthful", "Rebellious"],
+  "colors": {
+    "primary": "#FF4B00",
+    "secondary": "#0D0D0D",
+    "accent": "#FFFFFF",
+    "palette": ["#FF4B00", "#0D0D0D", "#FFFFFF", "#1A1A1A", "#FF6B2C"]
+  },
+  "typography": {
+    "heading_font": "Anton",
+    "heading_font_bn": "Hind Siliguri",
+    "body_font": "Inter",
+    "body_font_bn": "Noto Sans Bengali"
+  },
+  "logo_url": "",
+  "product_image_url": "",
+  "voice": {
+    "tone": "High-energy, direct, motivational",
+    "language": "both",
+    "formality": "Informal"
+  },
+  "do_not_use": ["Pastel colors", "Cursive fonts", "Soft imagery", "Corporate tone"],
+  "created_at": "2026-05-30T07:00:00Z"
+}

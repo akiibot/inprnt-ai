@@ -1,0 +1,38 @@
+{
+  "brand_id": "aether-demo-001",
+  "brand_name": "Aether Mobile",
+  "tagline": "Connect Beyond.",
+  "tagline_bn": "সংযোগের বাইরে।",
+  "industry": "Technology / Smartphones",
+  "target_audience": "Tech-savvy professionals and entrepreneurs (25–40); Gen Z university students; Bangladesh primary, South Asian tech markets secondary",
+  "brand_personality": ["Visionary", "Sophisticated", "Rooted", "Reliable"],
+  "colors": {
+    "primary": "#0A192F",
+    "secondary": "#64FFDA",
+    "accent": "#F8F9FA",
+    "palette": ["#0A192F", "#64FFDA", "#F8F9FA", "#8892B0"]
+  },
+  "typography": {
+    "heading_font": "Lora",
+    "heading_font_bn": "Hind Siliguri",
+    "body_font": "Lora",
+    "body_font_bn": "Hind Siliguri"
+  },
+  "logo_url": "",
+  "product_image_url": "",
+  "voice": {
+    "tone": "Intelligent, elevated, localized — explains complex technology in human terms",
+    "language": "both",
+    "formality": "Semi-formal"
+  },
+  "do_not_use": [
+    "Cluttered layouts with excessive tech specs (max 3 specs per poster)",
+    "Neon or aggressive gradient backgrounds",
+    "Fonts other than Lora or Hind Siliguri",
+    "Drop shadows or 3D effects on logo",
+    "Unapproved logo colors outside Horizon Navy, Aether Breeze, or Titanium White",
+    "Loud retail badges or aggressive sale bursts",
+    "Rotating or distorting the logo"
+  ],
+  "created_at": "2026-06-11T00:00:00Z"
+}

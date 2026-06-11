@@ -1,0 +1,37 @@
+{
+  "brand_id": "livana-demo-001",
+  "brand_name": "Livana",
+  "tagline": "Crafted for Bangladeshi skin. Every day, every wash.",
+  "tagline_bn": "বাংলাদেশের ত্বকের জন্য। প্রতিদিন, প্রতিটা ধোয়ায়।",
+  "industry": "Beauty / Soap Bar",
+  "target_audience": "Gen Z (18–25) university students and young professionals; Millennials (26–40); urban Bangladesh (Dhaka, Chittagong, Sylhet, Khulna); SEC A, B, Upper B+",
+  "brand_personality": ["Fresh", "Edgy", "Confident", "Real", "Deeply Trustworthy"],
+  "colors": {
+    "primary": "#32774A",
+    "secondary": "#B1CB70",
+    "accent": "#C0E078",
+    "palette": ["#32774A", "#B1CB70", "#C0E078"]
+  },
+  "typography": {
+    "heading_font": "TAN MOONLIGHT",
+    "heading_font_bn": "Hind Siliguri",
+    "body_font": "Inclusive Sans",
+    "body_font_bn": "Hind Siliguri"
+  },
+  "logo_url": "",
+  "product_image_url": "",
+  "voice": {
+    "tone": "Fresh, edgy, confident, science-backed, radically accessible",
+    "language": "both",
+    "formality": "Semi-formal"
+  },
+  "do_not_use": [
+    "Food association imagery or agricultural iconography",
+    "Heavy shading or synthetic gradients",
+    "Unapproved fonts or script substitutions",
+    "Posters without referencing Aloe Vera, Vitamin E, and Sandalwood",
+    "Saturated primary colors or neon overlays",
+    "Corporate or clinical tone"
+  ],
+  "created_at": "2026-06-11T00:00:00Z"
+}

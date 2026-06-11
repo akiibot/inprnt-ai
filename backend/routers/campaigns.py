@@ -30,7 +30,10 @@ from models.video import VeoPlan, VideoGenerateResponse
 from services.gemini import plan_campaign, generate_captions
 from services.video_planner import plan_video
 from services.veo_generator import generate_and_upload_veo_video
-from services.supabase_client import get_brand, get_supabase, upload_file_to_storage
+from services.supabase_client import (
+    get_brand, get_supabase, upload_file_to_storage,
+    is_demo_brand, load_cached_results,
+)
 from services.flux import generate_background
 from services.removebg import remove_background as strip_bg
 from compositor.template import build_html
@@ -80,27 +83,40 @@ def _read_image(url_or_path: str) -> bytes:
     return resp.content
 
 
-def _load_cached_posters() -> Optional[dict]:
-    """Return cached demo poster response if all three URLs are populated."""
-    cached_path = _MOCK_DATA_DIR / "cached_posters.json"
-    if not cached_path.exists():
+def _get_demo_response(brand_id: str) -> Optional[dict]:
+    """Return a cached generate-all response for a demo brand, or None."""
+    if not is_demo_brand(brand_id):
         return None
+    data = load_cached_results(brand_id)
+    if not data:
+        return None
+    p = data["posters"]
+    captions = data.get("captions") or {
+        "instagram": "", "facebook": "", "tiktok": "", "caption_bn": "", "hashtags": [],
+    }
+    # Upsert a lightweight campaign row so the video endpoints can look it up
+    campaign_id = f"{brand_id}-cached"
     try:
-        data = json.loads(cached_path.read_text(encoding="utf-8"))
-        urls = data.get("formats", {})
-        if all(urls.get(ar) for ar in ("1:1", "9:16", "16:9")):
-            return {
-                "campaign_id": "volt-bd-demo-cached",
-                "formats": [
-                    {"name": "Instagram Post", "aspect_ratio": "1:1", "poster_url": urls["1:1"]},
-                    {"name": "Instagram Story", "aspect_ratio": "9:16", "poster_url": urls["9:16"]},
-                    {"name": "Facebook Cover", "aspect_ratio": "16:9", "poster_url": urls["16:9"]},
-                ],
-                "total_generation_time_seconds": 0.0,
-            }
-    except Exception:
-        pass
-    return None
+        get_supabase().table("campaigns").upsert({
+            "id": campaign_id,
+            "brand_id": brand_id,
+            "campaign_name": data.get("campaign_name", "Demo Campaign"),
+            "poster_1x1_url":  p.get("1:1"),
+            "poster_9x16_url": p.get("9:16"),
+            "poster_16x9_url": p.get("16:9"),
+        }).execute()
+    except Exception as e:
+        print(f"Warning: demo campaign upsert failed: {e}")
+    return {
+        "campaign_id": campaign_id,
+        "formats": [
+            {"name": "Instagram Post",  "aspect_ratio": "1:1",  "poster_url": p["1:1"]},
+            {"name": "Instagram Story", "aspect_ratio": "9:16", "poster_url": p["9:16"]},
+            {"name": "Facebook Cover",  "aspect_ratio": "16:9", "poster_url": p["16:9"]},
+        ],
+        "captions": captions,
+        "total_generation_time_seconds": 0.0,
+    }
 
 router = APIRouter(tags=["Campaigns"])
 
@@ -483,11 +499,9 @@ async def generate_all_endpoint(request: GenerateAllRequest):
     Plan and render all three canonical formats (1:1, 9:16, 16:9) for a brand
     and persist them as a single campaign row.
     """
-    # Demo shortcut: serve cached posters instantly, skip Flux + Playwright entirely
-    if settings.DEMO_FALLBACK_MODE:
-        cached = _load_cached_posters()
-        if cached:
-            return cached
+    # Demo shortcut: serve cached results instantly for known demo brands
+    if demo := _get_demo_response(request.brand_id):
+        return demo
 
     brand_data = get_brand(request.brand_id)
     if not brand_data:
@@ -549,8 +563,7 @@ async def generate_all_endpoint(request: GenerateAllRequest):
                 "model_used": f"postergen/{pg_brain.PRIMARY_MODEL}",
                 "retry_count": 0,
             }
-            if not settings.DEMO_FALLBACK_MODE:
-                get_supabase().table("campaigns").insert(db_payload).execute()
+            get_supabase().table("campaigns").insert(db_payload).execute()
 
             captions = generate_captions(
                 brand_data, {"campaign_name": campaign_name, "campaign_strategy": strategy}
@@ -621,8 +634,7 @@ async def generate_all_endpoint(request: GenerateAllRequest):
             "model_used": first_blueprint.metadata.model_used,
             "retry_count": first_blueprint.metadata.retry_count,
         }
-        if not settings.DEMO_FALLBACK_MODE:
-            get_supabase().table("campaigns").insert(db_payload).execute()
+        get_supabase().table("campaigns").insert(db_payload).execute()
 
         captions = generate_captions(brand_data, first_blueprint.model_dump())
 
@@ -653,6 +665,23 @@ async def generate_all_endpoint(request: GenerateAllRequest):
 @router.get("/campaigns/{campaign_id}")
 async def get_campaign_endpoint(campaign_id: str):
     """Retrieve a campaign row (including blueprint JSON) by ID."""
+    # Demo short-circuit — non-UUID campaign IDs would fail Supabase's UUID validation
+    if demo_brand_id := _demo_brand_id_from_campaign(campaign_id):
+        cached = load_cached_results(demo_brand_id)
+        p = cached["posters"] if cached else {}
+        return {
+            "id": campaign_id,
+            "brand_id": demo_brand_id,
+            "campaign_name": cached.get("campaign_name", "Demo Campaign") if cached else "Demo Campaign",
+            "campaign_strategy": "Pre-loaded demo campaign — results served instantly.",
+            "adherence_level": "moderate",
+            "language": "both",
+            "poster_1x1_url":  p.get("1:1"),
+            "poster_9x16_url": p.get("9:16"),
+            "poster_16x9_url": p.get("16:9"),
+            "generation_time_seconds": 0.0,
+            "model_used": "demo",
+        }
     res = get_supabase().table("campaigns").select("*").eq("id", campaign_id).execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Campaign not found")
@@ -670,18 +699,35 @@ class GenerateVideoRequest(BaseModel):
     aspect_ratio: Literal["1:1", "9:16", "16:9"] = "1:1"
 
 
+def _demo_brand_id_from_campaign(campaign_id: str) -> str | None:
+    """Extract demo brand_id from a campaign_id like 'livana-demo-001-cached'."""
+    if campaign_id.endswith("-cached"):
+        potential = campaign_id[:-7]  # strip "-cached"
+        if is_demo_brand(potential):
+            return potential
+    return None
+
+
 @router.post("/campaigns/{campaign_id}/plan-video")
 async def plan_video_endpoint(campaign_id: str, body: PlanVideoRequest):
     """
     Asks Gemini to write a cinematic motion prompt for Veo 3.1.
     Returns veo_plan with motion_prompt, aspect_ratio, duration_seconds.
     """
+    # Demo short-circuit before any DB lookup (avoids UUID validation error)
+    demo_brand_id = _demo_brand_id_from_campaign(campaign_id)
+    if demo_brand_id:
+        cached = load_cached_results(demo_brand_id)
+        if cached and cached.get("video"):
+            return {"veo_plan": cached["video"]["veo_plan"]}
+
     db = get_supabase()
     row = db.table("campaigns").select("brand_id").eq("id", campaign_id).execute()
     if not row.data:
         raise HTTPException(status_code=404, detail="Campaign not found")
 
     brand_id = row.data[0].get("brand_id")
+
     brand_data = get_brand(brand_id)
     if not brand_data:
         raise HTTPException(status_code=404, detail=f"Brand {brand_id} not found")
@@ -708,13 +754,40 @@ async def generate_video_endpoint(campaign_id: str, body: GenerateVideoRequest):
     as the first frame with the motion prompt, uploads the resulting MP4, and saves
     a row to the videos table.
     """
+    # Demo short-circuit before any DB lookup (avoids UUID validation error)
+    ar = body.aspect_ratio
+    demo_brand_id = _demo_brand_id_from_campaign(campaign_id)
+    if demo_brand_id:
+        cached = load_cached_results(demo_brand_id)
+        video_url = (cached or {}).get("video", {}).get("url", "")
+        if not video_url:
+            raise HTTPException(
+                status_code=404,
+                detail="Demo video not yet available — upload a video URL to cached_results first.",
+            )
+        video_id = str(uuid.uuid4())
+        try:
+            get_supabase().table("videos").insert({
+                "id": video_id,
+                "campaign_id": campaign_id,
+                "video_url": video_url,
+                "aspect_ratio": ar,
+                "video_plan": (cached or {}).get("video", {}).get("veo_plan", {}),
+            }).execute()
+        except Exception as e:
+            print(f"Warning: demo video row insert failed: {e}")
+        return VideoGenerateResponse(
+            video_id=video_id,
+            video_url=video_url,
+            generation_time_seconds=0.0,
+        )
+
     db = get_supabase()
     row = db.table("campaigns").select("*").eq("id", campaign_id).execute()
     if not row.data:
         raise HTTPException(status_code=404, detail="Campaign not found")
 
     campaign = row.data[0]
-    ar = body.aspect_ratio
 
     # Resolve poster URL for this aspect ratio
     poster_url = campaign.get(_POSTER_COLUMN.get(ar, "poster_1x1_url"))

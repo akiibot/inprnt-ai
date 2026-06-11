@@ -1,0 +1,27 @@
+{
+  "_note": "Populated 2026-06-02. Demo brand — pipeline is bypassed and these URLs are returned instantly.",
+  "brand_id": "volt-bd-demo-001",
+  "campaign_name": "Volt BD Eid Special Edition",
+  "prompt": "Design an Eid Special Edition Launch campaign. Position Volt BD as the energy drink of festive gatherings. Use bold Eid motifs — crescents, stars, warm gold — against Volt's signature black-and-orange palette. Primary CTA in Bangla: 'ঈদের শক্তি, Volt-এর সাথে'. English sub-copy: 'Power Your Eid.' High-energy, celebratory, unapologetically bold.",
+  "posters": {
+    "1:1":  "https://ovjtwqjutffsgmxxkdpz.supabase.co/storage/v1/object/public/campaigns/165842c1-0cd5-46e2-9928-86dd9d754209/exports/export_1080x1080.png",
+    "9:16": "https://ovjtwqjutffsgmxxkdpz.supabase.co/storage/v1/object/public/campaigns/165842c1-0cd5-46e2-9928-86dd9d754209/exports/export_1080x1920.png",
+    "16:9": "https://ovjtwqjutffsgmxxkdpz.supabase.co/storage/v1/object/public/campaigns/165842c1-0cd5-46e2-9928-86dd9d754209/exports/export_1920x1080.png"
+  },
+  "captions": {
+    "instagram": "ঈদের এনার্জি এখন এক ক্যানে ⚡ Volt BD-তে উদযাপন করো এই ঈদ। #EidWithVolt",
+    "facebook": "এই ঈদে Volt BD-র সাথে থাকো এনার্জেটিক! বিশেষ Eid Edition এখন পাওয়া যাচ্ছে সারাদেশে।",
+    "tiktok": "Power Your Eid with Volt BD ⚡🌙 #VoltBD #EidSpecial #EnergyDrink",
+    "caption_bn": "ঈদের শক্তি, Volt-এর সাথে। মনোযোগ রাখো। রিচার্জ হও।",
+    "hashtags": ["#VoltBD", "#EidSpecial", "#PowerYourEid", "#ঈদমোবারক", "#EnergyDrink"]
+  },
+  "video": {
+    "url": "",
+    "veo_plan": {
+      "motion_prompt": "Cinematic slow-motion shot of a Volt BD can spinning against a dark background with electric orange sparks and Eid crescents floating around it. Camera pulls back to reveal a festive gathering scene with warm gold lighting. Bold energy pulses through the frame.",
+      "audio_prompt": null,
+      "aspect_ratio": "9:16",
+      "duration_seconds": 6
+    }
+  }
+}
