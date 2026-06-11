@@ -56,7 +56,7 @@ export default function HomePage() {
           <br />
           <span className={styles.headlineAccent}>Campaign creatives.</span>
           <br />
-          Under 60 seconds.
+          Within a few minutes.
         </h1>
 
         <p className={styles.subheadline}>
