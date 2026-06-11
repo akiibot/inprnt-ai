@@ -72,17 +72,27 @@ export default function CampaignPage({ params }: { params: { id: string } }) {
     setVideoUrl(null);
     setVideoPlan(null);
 
+    const isDemo = campaign.model_used === "demo";
+    const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+    const startTime = Date.now();
+
     try {
       // Step 1 — plan
       setVideoStep("planning");
-      const { veo_plan } = await planCampaignVideo(campaign.id, "1:1");
+      const planPromise = planCampaignVideo(campaign.id, "1:1");
+      if (isDemo) await sleep(1300 + Math.random() * 400); // 1.3–1.7s
+      const { veo_plan } = await planPromise;
       setVideoPlan(veo_plan);
 
       // Step 2 — generate
       setVideoStep("rendering");
-      const result = await generateCampaignVideo(campaign.id, veo_plan, "1:1");
+      const genPromise = generateCampaignVideo(campaign.id, veo_plan, "1:1");
+      if (isDemo) await sleep(3200 + Math.random() * 500); // 3.2–3.7s
+      const result = await genPromise;
+
       setVideoUrl(result.video_url);
-      setVideoElapsed(result.generation_time_seconds);
+      // Show real wall-clock time (includes delay) so the UI matches what user felt
+      setVideoElapsed(isDemo ? (Date.now() - startTime) / 1000 : result.generation_time_seconds);
       setVideoStep("done");
     } catch (e: unknown) {
       setVideoError(e instanceof Error ? e.message : String(e));

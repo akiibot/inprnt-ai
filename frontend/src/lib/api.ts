@@ -79,7 +79,7 @@ export async function checkHealth(): Promise<HealthResponse> {
 export async function uploadBrand(
   pdf: File,
   logo: File
-): Promise<{ brand_id: string; brand: Brand; message: string }> {
+): Promise<{ brand_id: string; brand: Brand; message: string; colors_source?: string; suggested_prompt?: string }> {
   const form = new FormData();
   form.append("pdf", pdf);
   form.append("logo", logo);

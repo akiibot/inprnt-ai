@@ -45,11 +45,13 @@ def _build_demo_upload_response(brand_id: str) -> BrandUploadResponse:
     """Return a preloaded BrandUploadResponse for a known demo brand."""
     brand_data = load_demo_brand_data(brand_id)
     brand = Brand(**{**brand_data, "brand_id": brand_data["id"]})
+    prompt = load_demo_prompt(brand_id) or ""
     return BrandUploadResponse(
         brand_id=brand_id,
         brand=brand,
         colors_source="demo-preloaded",
         message=f"Demo brand detected — serving preloaded profile ({brand.brand_name})",
+        suggested_prompt=prompt,
     )
 
 

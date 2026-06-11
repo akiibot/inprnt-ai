@@ -53,3 +53,4 @@ class BrandUploadResponse(BaseModel):
     brand: Brand
     colors_source: str = "colorthief"
     message: str = "Brand identity extracted successfully"
+    suggested_prompt: Optional[str] = None  # Pre-filled for demo brands

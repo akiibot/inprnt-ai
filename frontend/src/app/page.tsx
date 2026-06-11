@@ -2,16 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Brain, Palette, LayoutGrid, ChevronRight } from "lucide-react";
+import { Brain, Palette, LayoutGrid, ChevronRight, Play } from "lucide-react";
 import { checkHealth } from "@/lib/api";
 import type { HealthResponse } from "@/lib/types";
 import styles from "./page.module.css";
-
-const DEMO_BRANDS = [
-  { slug: "livana",     name: "Livana",        color: "#32774A" },
-  { slug: "volt-bd",    name: "Volt BD",        color: "#FF4B00" },
-  { slug: "aether",     name: "Aether Mobile",  color: "#64FFDA" },
-];
 
 export default function HomePage() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
@@ -79,15 +73,12 @@ export default function HomePage() {
         </div>
 
         <div className={styles.demoSection}>
-          <span className={styles.demoSectionLabel}>or try a demo brand</span>
-          <div className={styles.demoBrandRow}>
-            {DEMO_BRANDS.map((b) => (
-              <Link key={b.slug} href={`/create?demo=${b.slug}`} className={styles.demoBrandBtn}>
-                <span className={styles.demoBrandDot} style={{ background: b.color }} />
-                {b.name}
-              </Link>
-            ))}
-          </div>
+          <span className={styles.demoSectionLabel}>or try a live demo</span>
+          <Link href="/create?demo=upload" className={styles.ctaDemo}>
+            <Play size={14} />
+            Try Demo
+          </Link>
+          <span className={styles.demoHint}>Upload our sample brand files — results in under 3 seconds</span>
         </div>
 
         <p className={`${styles.bnTagline} font-bn`} lang="bn">

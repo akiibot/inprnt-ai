@@ -76,8 +76,9 @@ function UploadZone({
 
 function CreateCampaignInner() {
   const searchParams = useSearchParams();
-  const demoParam = searchParams.get("demo"); // "1" | "livana" | "aether" | "volt-bd" | null
-  const isDemo = !!demoParam;
+  const demoParam = searchParams.get("demo"); // "1" | "livana" | "aether" | "volt-bd" | "upload" | null
+  const isDemoUpload = demoParam === "upload"; // new: user uploads files, backend detects brand
+  const isDemo = !!demoParam && !isDemoUpload;  // old: pre-loaded brand, no file upload
   const urlBrandId = searchParams.get("brand_id");
 
   const [currentStep, setCurrentStep] = useState<Step>(urlBrandId ? "PROMPT" : "UPLOAD_BRAND");
@@ -88,6 +89,11 @@ function CreateCampaignInner() {
   const [demoBrandId, setDemoBrandId] = useState<string | null>(null);
   const [demoBrand, setDemoBrand] = useState<Brand | null>(null);
   const [demoLoadError, setDemoLoadError] = useState<string | null>(null);
+  // isDemoUpload state: result of early brand upload at step transition
+  const [brandUploadResult, setBrandUploadResult] = useState<{
+    brand_id: string; brand: Brand; message: string; colors_source?: string; suggested_prompt?: string;
+  } | null>(null);
+  const [isBrandUploading, setIsBrandUploading] = useState(false);
   const [campaignId, setCampaignId] = useState<string | null>(null);
 
   const [brandPdf, setBrandPdf] = useState<File | null>(null);
@@ -178,12 +184,14 @@ function CreateCampaignInner() {
 
   const handleNext = () => {
     if (currentStep === "UPLOAD_BRAND") {
+      if (isDemoUpload) return; // handled by its own button/handler
       if (brandInputMode === "upload" && (!brandPdf || !brandLogo)) return;
       setCurrentStep("UPLOAD_PRODUCT");
     } else if (currentStep === "UPLOAD_PRODUCT") {
       setCurrentStep("PROMPT");
     } else if (currentStep === "PROMPT") {
-      if (isDemo && demoBrandId) {
+      if (demoBrandId) {
+        // demoBrandId is set either by old ?demo=livana flow or by file-upload detection
         handleDemoGenerate();
       } else {
         handleGenerate();
@@ -199,12 +207,36 @@ function CreateCampaignInner() {
     setIsProcessing(true);
     setLogs([]);
     setResults([]);
+
+    const startTime = Date.now();
+    const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
     try {
-      addLog(`Demo mode: loading ${demoBrand?.brand_name ?? demoBrandId} brand from mock data...`);
-      addLog("Calling campaigns/generate-all (serving cached demo posters)...");
-      const res = await runDemoGenerate(demoBrandId, prompt, adherenceLevel, engine);
+      // Fire the real API call immediately (cached, returns instantly)
+      const apiPromise = runDemoGenerate(demoBrandId, prompt, adherenceLevel, engine);
+
+      // Realistic log sequence plays in parallel — total ~3.5–4.5 s
+      addLog(`Analysing ${demoBrand?.brand_name ?? "brand"} identity — colours, fonts, tone of voice...`);
+      await sleep(1200 + Math.random() * 300);
       if (abortRef.current) return;
+
+      addLog("Gemini 2.5 Pro writing poster compositions for all 3 formats...");
+      await sleep(1600 + Math.random() * 400);
+      if (abortRef.current) return;
+
+      addLog("Rendering Bangla + English typography and compositing brand assets...");
+      await sleep(1200 + Math.random() * 300);
+      if (abortRef.current) return;
+
+      // Await the API (already done since it was instant)
+      const res = await apiPromise;
+      if (abortRef.current) return;
+
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      addLog(`✅ All 3 formats ready — ${elapsed}s`);
+
       setCampaignId(res.campaign_id);
+      setCaptions(res.captions ?? null);
       const mapped: ExportResult[] = res.formats.map((f) => ({
         format_name: f.name,
         url: f.poster_url,
@@ -213,7 +245,11 @@ function CreateCampaignInner() {
         aspect_ratio: f.aspect_ratio,
       }));
       setResults(mapped);
-      addLog(`✅ Demo complete in ${res.total_generation_time_seconds.toFixed(1)}s`);
+
+      // Brief pause so the success log is readable before results appear
+      await sleep(450);
+      if (abortRef.current) return;
+
       setCurrentStep("RESULTS");
       try {
         sessionStorage.setItem("imprnt_results", JSON.stringify({ campaignId: res.campaign_id, results: mapped }));
@@ -230,9 +266,32 @@ function CreateCampaignInner() {
     }
   };
 
+  // isDemoUpload: called when user clicks "Next Step" at brand upload step.
+  // Calls uploadBrand immediately, detects demo brand from filename/content,
+  // pre-fills prompt if demo brand found, then advances to UPLOAD_PRODUCT.
+  const handleBrandUploadNext = async () => {
+    if (!brandPdf || !brandLogo || isBrandUploading) return;
+    setIsBrandUploading(true);
+    setErrorMessage(null);
+    try {
+      const res = await uploadBrand(brandPdf, brandLogo);
+      setBrandUploadResult(res);
+      if (res.colors_source === "demo-preloaded") {
+        setDemoBrandId(res.brand_id);
+        setDemoBrand(res.brand);
+        if (res.suggested_prompt) setPrompt(res.suggested_prompt);
+      }
+      setCurrentStep("UPLOAD_PRODUCT");
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : String(err));
+    } finally {
+      setIsBrandUploading(false);
+    }
+  };
+
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
-    const effectiveBrandId = urlBrandId || libraryBrandId;
+    const effectiveBrandId = urlBrandId || libraryBrandId || brandUploadResult?.brand_id || null;
     if (!effectiveBrandId && (!brandPdf || !brandLogo)) return;
 
     abortRef.current = false;
@@ -252,6 +311,8 @@ function CreateCampaignInner() {
         if (abortRef.current) return;
         brandId = brandRes.brand_id;
         addLog(`✅ Brand extracted via Gemini: ${brandRes.brand.brand_name}`);
+      } else if (brandUploadResult?.brand_id === brandId) {
+        addLog(`Phase 1/4: Brand recognized: ${brandUploadResult.brand.brand_name}`);
       } else if (urlBrandId) {
         addLog("Phase 1/4: Using manually created brand profile...");
       } else {
@@ -329,8 +390,10 @@ function CreateCampaignInner() {
       setProductImage(null);
       setPrompt("");
       setDemoBrandId(null);
+      setDemoBrand(null);
       setLastBlueprint(null);
       setBrandInputMode("upload");
+      setBrandUploadResult(null);
     }
   };
 
@@ -362,11 +425,15 @@ function CreateCampaignInner() {
 
       <header className={styles.header}>
         <h1 className={styles.title}>
-          {isDemo ? `${demoBrand?.brand_name ?? "Demo"} Demo` : "New Campaign"}
+          {(isDemo || (isDemoUpload && !!demoBrandId))
+            ? `${demoBrand?.brand_name ?? "Demo"} Demo`
+            : isDemoUpload ? "Try Demo" : "New Campaign"}
         </h1>
         <p className={styles.subtitle}>
-          {isDemo
+          {(isDemo || (isDemoUpload && !!demoBrandId))
             ? `Pre-loaded ${demoBrand?.brand_name ?? "demo"} campaign — results served instantly.`
+            : isDemoUpload
+            ? "Upload your brand files below — we'll recognize them automatically."
             : "AI-powered creative direction and execution."}
         </p>
       </header>
@@ -434,7 +501,55 @@ function CreateCampaignInner() {
             </div>
           )}
 
-          {currentStep === "UPLOAD_BRAND" && !isDemo && (
+          {currentStep === "UPLOAD_BRAND" && isDemoUpload && (
+            <div>
+              <h2 className={styles.cardTitle}>1. Brand Identity</h2>
+              <p className={styles.stepDescription}>
+                Upload the demo brand guidelines PDF and logo. We&apos;ll read the filename and
+                recognize your brand automatically — no AI processing needed.
+              </p>
+              <div className={styles.demoUploadHint}>
+                <Zap size={13} style={{ flexShrink: 0, color: "var(--color-primary)" }} />
+                Demo brand files are recognized instantly.
+              </div>
+              <UploadZone
+                label="Brand Guidelines (PDF)"
+                file={brandPdf}
+                accept=".pdf"
+                inputRef={brandInputRef}
+                onFile={setBrandPdf}
+                hint="Click or drag to upload brand_guidelines.pdf"
+              />
+              <UploadZone
+                label="Brand Logo (PNG/SVG)"
+                file={brandLogo}
+                accept="image/png, image/svg+xml"
+                inputRef={logoInputRef}
+                onFile={setBrandLogo}
+                hint="Click or drag to upload transparent logo"
+              />
+              {errorMessage && (
+                <p style={{ color: "var(--color-error)", fontSize: "0.875rem", marginTop: "var(--space-3)" }}>
+                  {errorMessage}
+                </p>
+              )}
+              <div className={styles.actions} style={{ marginTop: "var(--space-4)" }}>
+                <button
+                  className={`${styles.button} ${styles.buttonPrimary}`}
+                  onClick={handleBrandUploadNext}
+                  disabled={!brandPdf || !brandLogo || isBrandUploading}
+                >
+                  {isBrandUploading ? (
+                    <><Loader2 className={styles.spinIcon} size={16} /> Reading brand…</>
+                  ) : (
+                    <>Next Step <ChevronRight size={18} /></>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {currentStep === "UPLOAD_BRAND" && !isDemo && !isDemoUpload && (
             <div>
               <h2 className={styles.cardTitle}>1. Brand Identity</h2>
 
@@ -550,7 +665,76 @@ function CreateCampaignInner() {
             </div>
           )}
 
-          {currentStep === "UPLOAD_PRODUCT" && !isDemo && (
+          {currentStep === "UPLOAD_PRODUCT" && isDemoUpload && !!demoBrandId && (
+            <div>
+              <h2 className={styles.cardTitle}>
+                2. Product Focus <span className={styles.optionalTag}>Demo</span>
+              </h2>
+              <p className={styles.stepDescription}>
+                Brand recognized — product image is pre-loaded and your prompt is pre-filled.
+              </p>
+              <div className={styles.demoBrandCard}>
+                <div
+                  className={styles.demoBrandCardAccent}
+                  style={{ background: demoBrand?.colors.primary ?? "var(--color-primary)" }}
+                />
+                <div className={styles.demoBrandCardInfo}>
+                  <div className={styles.demoBrandCardName}>✓ {demoBrand?.brand_name} detected</div>
+                  <div className={styles.demoBrandCardTagline}>{demoBrand?.tagline}</div>
+                  <div className={styles.demoBrandCardIndustry}>{demoBrand?.industry}</div>
+                </div>
+                <span className={styles.demoReadyBadge}>Pre-loaded</span>
+              </div>
+              <div className={styles.actions}>
+                <button
+                  className={styles.button}
+                  onClick={() => {
+                    setBrandUploadResult(null);
+                    setDemoBrandId(null);
+                    setDemoBrand(null);
+                    setPrompt("");
+                    setCurrentStep("UPLOAD_BRAND");
+                  }}
+                >
+                  Back
+                </button>
+                <button
+                  className={`${styles.button} ${styles.buttonPrimary}`}
+                  onClick={() => setCurrentStep("PROMPT")}
+                >
+                  Next Step <ChevronRight size={18} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {currentStep === "UPLOAD_PRODUCT" && isDemoUpload && !demoBrandId && (
+            // Non-demo brand uploaded via demo=upload — continue with normal product flow
+            <div>
+              <h2 className={styles.cardTitle}>
+                2. Product Focus <span className={styles.optionalTag}>Optional</span>
+              </h2>
+              <p className={styles.stepDescription}>
+                Upload an image of the product. Our AI will automatically remove the background.
+              </p>
+              <UploadZone
+                label="Product Image"
+                file={productImage}
+                accept="image/*"
+                inputRef={productInputRef}
+                onFile={setProductImage}
+                hint="Click or drag to upload product image"
+              />
+              <div className={styles.actions}>
+                <button className={styles.button} onClick={() => setCurrentStep("UPLOAD_BRAND")}>Back</button>
+                <button className={`${styles.button} ${styles.buttonPrimary}`} onClick={handleNext}>
+                  Next Step <ChevronRight size={18} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {currentStep === "UPLOAD_PRODUCT" && !isDemo && !isDemoUpload && (
             <div>
               <h2 className={styles.cardTitle}>
                 2. Product Focus <span className={styles.optionalTag}>Optional</span>
@@ -824,7 +1008,7 @@ function CreateCampaignInner() {
                   </>
                 )}
                 <button className={`${styles.button} ${styles.buttonPrimary}`} onClick={handleStartNew}>
-                  {isDemo ? "Generate Again" : "Start New Campaign"}
+                  {(isDemo || isDemoUpload) ? "Try Again" : "Start New Campaign"}
                 </button>
               </div>
             </div>

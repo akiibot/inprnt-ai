@@ -294,6 +294,13 @@
   flex-shrink: 0;
 }
 
+.demoHint {
+  font-size: 11px;
+  color: var(--color-grey-600);
+  letter-spacing: 0.04em;
+  margin-top: calc(-1 * var(--space-2));
+}
+
 .bnTagline {
   font-size: 15px;
   color: var(--color-grey-400);
