@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { Anton, Inter, Hind_Siliguri, Noto_Sans_Bengali } from "next/font/google";
+import { JetBrains_Mono, Inter, Hind_Siliguri, Noto_Sans_Bengali } from "next/font/google";
 import "./globals.css";
 
-const anton = Anton({
-  weight: "400",
+const jetbrainsMono = JetBrains_Mono({
+  weight: ["400", "500", "600"],
   subsets: ["latin"],
-  variable: "--font-anton",
+  variable: "--font-jetbrains-mono",
   display: "swap",
 });
 
@@ -44,7 +44,7 @@ export default function RootLayout({
   return (
     <html
       lang="en-BD"
-      className={`${anton.variable} ${inter.variable} ${hindSiliguri.variable} ${notoSansBengali.variable}`}
+      className={`${jetbrainsMono.variable} ${inter.variable} ${hindSiliguri.variable} ${notoSansBengali.variable}`}
     >
       <body>{children}</body>
     </html>

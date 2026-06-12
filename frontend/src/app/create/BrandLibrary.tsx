@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { BookOpen, Pencil, Trash2, Check, X, Loader2 } from "lucide-react";
+import { BookOpen, Trash2, Check, X, Loader2, Pencil } from "lucide-react";
 import { useBrandLibrary } from "@/lib/useBrandLibrary";
 import styles from "./BrandLibrary.module.css";
 
@@ -12,7 +12,6 @@ interface Props {
 
 export function BrandLibrary({ onSelect }: Props) {
   const { brands, loading, error, deleteBrand, renameBrand } = useBrandLibrary();
-
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -27,28 +26,20 @@ export function BrandLibrary({ onSelect }: Props) {
   const confirmRename = async (id: string) => {
     if (!renameValue.trim()) return;
     setActionLoading(id);
-    try {
-      await renameBrand(id, renameValue.trim());
-    } finally {
-      setActionLoading(null);
-      setRenamingId(null);
-    }
+    try { await renameBrand(id, renameValue.trim()); }
+    finally { setActionLoading(null); setRenamingId(null); }
   };
 
   const confirmDelete = async (id: string) => {
     setActionLoading(id);
-    try {
-      await deleteBrand(id);
-    } finally {
-      setActionLoading(null);
-      setDeletingId(null);
-    }
+    try { await deleteBrand(id); }
+    finally { setActionLoading(null); setDeletingId(null); }
   };
 
   if (loading) {
     return (
       <div className={styles.emptyState}>
-        <Loader2 size={28} className="animate-spin" />
+        <Loader2 size={28} style={{ animation: "spin 1s linear infinite" }} />
         <p>Loading saved brands…</p>
       </div>
     );
@@ -79,22 +70,24 @@ export function BrandLibrary({ onSelect }: Props) {
 
         return (
           <div key={brand.id} className={styles.card}>
-            <div className={styles.cardLogo}>
+            {/* Thumbnail */}
+            <div className={styles.thumbnail}>
               {brand.logo_url ? (
                 <Image
                   src={brand.logo_url}
                   alt={brand.brand_name}
                   fill
-                  className={styles.cardLogoImg}
+                  className={styles.thumbnailImg}
                   unoptimized
                 />
               ) : (
-                <div className={styles.cardLogoPlaceholder}>
+                <div className={styles.thumbnailPlaceholder}>
                   {brand.brand_name[0]?.toUpperCase() ?? "?"}
                 </div>
               )}
             </div>
 
+            {/* Card body */}
             <div className={styles.cardBody}>
               {isRenaming ? (
                 <div className={styles.renameRow}>
@@ -108,77 +101,46 @@ export function BrandLibrary({ onSelect }: Props) {
                     }}
                     autoFocus
                   />
-                  <button
-                    className={styles.iconBtn}
-                    onClick={() => confirmRename(brand.id)}
-                    disabled={isLoading || !renameValue.trim()}
-                    aria-label="Save name"
-                  >
-                    {isLoading ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                  <button className={styles.iconBtn} onClick={() => confirmRename(brand.id)} disabled={isLoading || !renameValue.trim()}>
+                    {isLoading ? <Loader2 size={12} style={{ animation: "spin 1s linear infinite" }} /> : <Check size={12} />}
                   </button>
-                  <button
-                    className={styles.iconBtn}
-                    onClick={() => setRenamingId(null)}
-                    aria-label="Cancel rename"
-                  >
-                    <X size={12} />
-                  </button>
+                  <button className={styles.iconBtn} onClick={() => setRenamingId(null)}><X size={12} /></button>
                 </div>
               ) : (
                 <div className={styles.nameRow}>
                   <span className={styles.brandName}>{brand.brand_name}</span>
-                  <button
-                    className={styles.iconBtnMuted}
-                    onClick={() => startRename(brand.id, brand.brand_name)}
-                    aria-label="Rename brand"
-                  >
+                  <button className={styles.renameBtn} onClick={() => startRename(brand.id, brand.brand_name)} aria-label="Rename">
                     <Pencil size={11} />
                   </button>
                 </div>
               )}
 
-              <div className={styles.cardMeta}>
-                <div
-                  className={styles.colorSwatch}
-                  style={{ background: brand.colors?.primary ?? "#444" }}
-                  title={brand.colors?.primary ?? ""}
-                />
-                <span className={styles.cardDate}>
-                  {new Date(brand.created_at).toLocaleDateString(undefined, {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
-                </span>
-              </div>
+              <span className={styles.cardDate}>
+                {new Date(brand.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+              </span>
             </div>
 
+            {/* Footer: Use button + delete */}
             <div className={styles.cardFooter}>
               {isDeleting ? (
                 <div className={styles.deleteConfirm}>
                   <span className={styles.deleteQuestion}>Delete?</span>
-                  <button
-                    className={styles.deleteBtnYes}
-                    onClick={() => confirmDelete(brand.id)}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? <Loader2 size={11} className="animate-spin" /> : "Yes"}
+                  <button className={styles.deleteBtnYes} onClick={() => confirmDelete(brand.id)} disabled={isLoading}>
+                    {isLoading ? <Loader2 size={11} style={{ animation: "spin 1s linear infinite" }} /> : "Yes"}
                   </button>
-                  <button className={styles.iconBtn} onClick={() => setDeletingId(null)}>
-                    No
-                  </button>
+                  <button className={styles.iconBtn} onClick={() => setDeletingId(null)}>No</button>
                 </div>
               ) : (
                 <>
                   <button className={styles.useBtn} onClick={() => onSelect(brand.id)}>
-                    Use This Brand
+                    Use this Brand
                   </button>
                   <button
-                    className={styles.iconBtnDanger}
+                    className={styles.deleteBtn}
                     onClick={() => { setDeletingId(brand.id); setRenamingId(null); }}
                     aria-label="Delete brand"
                   >
-                    <Trash2 size={13} />
+                    <Trash2 size={14} />
                   </button>
                 </>
               )}

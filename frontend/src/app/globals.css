@@ -1,31 +1,47 @@
 /* ================================================================
-   Imprnt AI — Global Styles
-   Design tokens, typography, and base resets
+   Imprnt AI — Global Styles (Light Editorial Theme)
    ================================================================ */
 
-/* ── Google Font CSS Variables ──────────────────────────────── */
 :root {
-  /* Font families (set by next/font CSS variables) */
-  --font-heading-en: var(--font-anton), system-ui, sans-serif;
+  /* Fonts */
+  --font-heading-en: var(--font-jetbrains-mono), "Courier New", monospace;
   --font-heading-bn: var(--font-hind-siliguri), system-ui, sans-serif;
   --font-body-en: var(--font-inter), system-ui, sans-serif;
   --font-body-bn: var(--font-noto-bengali), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), "Courier New", monospace;
 
   /* ── Color Palette ─────────────────────────────────────────── */
-  --color-bg:          #080808;
-  --color-bg-card:     #111111;
-  --color-bg-elevated: #1a1a1a;
-  --color-border:      rgba(255, 255, 255, 0.08);
-  --color-border-hover:rgba(255, 75, 0, 0.4);
+  --color-bg:          #fffbf2;
+  --color-bg-card:     #ffffff;
+  --color-bg-elevated: #f5f0e8;
+  --color-bg-muted:    #f0ebe0;
 
-  --color-primary:     #FF4B00;
-  --color-primary-dim: rgba(255, 75, 0, 0.15);
-  --color-primary-glow:rgba(255, 75, 0, 0.3);
-  --color-accent:      #FF6B2C;
-  --color-white:       #FFFFFF;
-  --color-grey-100:    #F5F5F5;
-  --color-grey-400:    #999999;
-  --color-grey-600:    #444444;
+  --color-border:        rgba(61, 59, 55, 0.12);
+  --color-border-strong: rgba(61, 59, 55, 0.25);
+  --color-border-hover:  rgba(255, 118, 88, 0.4);
+
+  --color-primary:     #ff7658;
+  --color-primary-dim: rgba(255, 118, 88, 0.12);
+  --color-primary-glow:rgba(255, 118, 88, 0.3);
+  --color-accent:      #ff5c3a;
+
+  --color-text:        #3d3b37;
+  --color-text-muted:  rgba(61, 59, 55, 0.5);
+  --color-text-heading:#000000;
+  --color-white:       #ffffff;
+
+  --color-grey-100:    #f5f2ec;
+  --color-grey-200:    #e8e3da;
+  --color-grey-300:    #d4cfc7;
+  --color-grey-400:    #a09b94;
+  --color-grey-600:    #6b6660;
+
+  --color-active-bg:   #111111;
+  --color-active-text: #ffffff;
+
+  /* Terminal */
+  --color-terminal-bg:   #000000;
+  --color-terminal-text: #4ade80;
 
   /* ── Spacing ───────────────────────────────────────────────── */
   --space-1:  4px;
@@ -42,10 +58,10 @@
   --space-24: 96px;
 
   /* ── Radii ─────────────────────────────────────────────────── */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 20px;
   --radius-full: 9999px;
 
   /* ── Transitions ───────────────────────────────────────────── */
@@ -72,7 +88,7 @@ html {
 body {
   font-family: var(--font-body-en);
   background-color: var(--color-bg);
-  color: var(--color-white);
+  color: var(--color-text);
   line-height: 1.6;
   min-height: 100vh;
 }
@@ -82,10 +98,10 @@ body {
   width: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--color-bg);
+  background: var(--color-bg-elevated);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-grey-600);
+  background: var(--color-grey-300);
   border-radius: var(--radius-full);
 }
 ::-webkit-scrollbar-thumb:hover {
@@ -102,6 +118,9 @@ body {
 .font-en-heading {
   font-family: var(--font-heading-en);
 }
+.font-mono {
+  font-family: var(--font-mono);
+}
 
 /* ── Focus visible ──────────────────────────────────────────── */
 :focus-visible {
@@ -112,7 +131,7 @@ body {
 /* ── Selection ──────────────────────────────────────────────── */
 ::selection {
   background: var(--color-primary-dim);
-  color: var(--color-white);
+  color: var(--color-text-heading);
 }
 
 /* ── Utility: visually hidden ───────────────────────────────── */

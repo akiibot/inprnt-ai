@@ -33,7 +33,7 @@ export function CaptionPanel({ captions }: { captions: CampaignCaptions }) {
         fontFamily: "var(--font-heading-en)",
         fontSize: "18px",
         marginBottom: "var(--space-5)",
-        color: "var(--color-white)",
+        color: "var(--color-text-heading)",
       }}>
         ✍️ Brand-Voice Captions
       </h3>
@@ -52,7 +52,7 @@ export function CaptionPanel({ captions }: { captions: CampaignCaptions }) {
           <div style={{ flex: 1 }}>
             <div style={{
               fontSize: "12px",
-              color: "var(--color-grey-400)",
+              color: "var(--color-text-muted)",
               marginBottom: "var(--space-2)",
               textTransform: "uppercase",
               letterSpacing: "0.08em",
@@ -60,7 +60,7 @@ export function CaptionPanel({ captions }: { captions: CampaignCaptions }) {
               {icon} {label}
             </div>
             <p style={{
-              color: "var(--color-white)",
+              color: "var(--color-text-heading)",
               fontSize: "14px",
               lineHeight: "1.6",
               margin: 0,
@@ -81,7 +81,7 @@ export function CaptionPanel({ captions }: { captions: CampaignCaptions }) {
               cursor: "pointer",
               color: copied === key
                 ? "var(--color-primary)"
-                : "var(--color-grey-400)",
+                : "var(--color-text-muted)",
               flexShrink: 0,
             }}
           >
@@ -114,7 +114,7 @@ export function CaptionPanel({ captions }: { captions: CampaignCaptions }) {
             cursor: "pointer",
             color: copied === "hashtags"
               ? "var(--color-primary)"
-              : "var(--color-grey-400)",
+              : "var(--color-text-muted)",
           }}
         >
           {copied === "hashtags" ? <Check size={14} /> : <Copy size={14} />}
